@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LexLP</title>
+    <style>
+        :root {
+            --bg-color: #1e1e1e;
+            --text-color: #d4d4d4;
+            --btn-bg: #0e639c;
+            --btn-hover: #1177bb;
+            --table-border: #333333;
+            --table-header: #252526;
+            --table-row-hover: #2a2d2e;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+        h1 {
+            margin-top: 0;
+            font-size: 1.5rem;
+            color: #569cd6;
+        }
+        .container {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+            min-height: 0;
+        }
+        .left-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        textarea {
+            flex: 1;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            border: 1px solid var(--table-border);
+            padding: 10px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 14px;
+            resize: none;
+            outline: none;
+            border-radius: 4px;
+        }
+        textarea:focus {
+            border-color: #007fd4;
+        }
+        .toolbar {
+            margin-top: 10px;
+            display: flex;
+            justify-content: flex-end;
+        }
+        button {
+            background-color: var(--btn-bg);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+            font-weight: 600;
+        }
+        button:hover {
+            background-color: var(--btn-hover);
+        }
+        .table-container {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid var(--table-border);
+            background-color: #1e1e1e;
+            border-radius: 4px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--table-border);
+        }
+        th {
+            background-color: var(--table-header);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            font-weight: 600;
+        }
+        tr:hover {
+            background-color: var(--table-row-hover);
+        }
+        .num-int { color: #b5cea8; font-weight: bold; }
+        .num-dec { color: #dcdcaa; font-weight: bold; }
+        .unknown { color: #f44336; font-style: italic; }
+    </style>
+</head>
+<body>
+    <h1>LexLP - Analizador Léxico (Fase 1)</h1>
+    <div class="container">
+        <div class="left-panel">
+            <textarea id="codeInput" placeholder="Escribe tu código LP aquí...&#10;Ejemplo:&#10;123&#10;45.67&#10;  890"></textarea>
+            <div class="toolbar">
+                <button onclick="ejecutarAnalisis()">Analizar Código</button>
+            </div>
+        </div>
+        <div class="right-panel">
+            <div class="table-container">
+                <table id="tokenTable">
+                    <thead>
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Lexema</th>
+                            <th>Línea</th>
+                            <th>Columna</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Los tokens se insertarán aquí dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function ejecutarAnalisis() {
+            const code = document.getElementById('codeInput').value;
+            const tbody = document.querySelector('#tokenTable tbody');
+            
+            try {
+                // Llamada nativa C++ a través de webview binding
+                const tokens = await window.analizarCodigo(code);
+                
+                tbody.innerHTML = ''; // Limpiar la tabla actual
+                
+                if (tokens && tokens.length > 0) {
+                    tokens.forEach(token => {
+                        const tr = document.createElement('tr');
+                        
+                        let tipoClass = '';
+                        if (token.tipo === 'NUM_INT') tipoClass = 'num-int';
+                        else if (token.tipo === 'NUM_DEC') tipoClass = 'num-dec';
+                        else tipoClass = 'unknown';
+
+                        tr.innerHTML = `
+                            <td class="${tipoClass}">${token.tipo}</td>
+                            <td>${token.lexema}</td>
+                            <td>${token.linea}</td>
+                            <td>${token.columna}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #888;">No se encontraron tokens.</td></tr>';
+                }
+            } catch (error) {
+                console.error("Error al analizar código:", error);
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #f44336;">Error de análisis: ${error.message}</td></tr>`;
+            }
+        }
+    </script>
+</body>
+</html>
