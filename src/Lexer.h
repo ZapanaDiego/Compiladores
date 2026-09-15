@@ -2,12 +2,7 @@
 #include <string>
 #include <vector>
 
-struct Token {
-    std::string type;
-    std::string lexeme;
-    int line;
-    int column;
-};
+#include "Token.h"
 
 class Lexer {
 public:
