@@ -1,4 +1,4 @@
-#include "Lexer.hpp"
+#include "Lexer.h"
 #include <nlohmann/json.hpp>
 #include <gtk/gtk.h>
 #include <webkit2/webkit2.h>
