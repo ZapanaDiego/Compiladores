@@ -62,6 +62,13 @@ std::vector<Token> Lexer::tokenize() {
             }
             
             tokens.push_back({has_dot ? "NUM_DEC" : "NUM_INT", lexeme, start_line, start_col});
+        } else if (std::isalpha(c) || c == '_') {
+            std::string lexeme;
+            while (!isAtEnd() && (std::isalnum(peek()) || peek() == '_')) {
+                lexeme += advance();
+            }
+            symbolTable.insert_or_update(lexeme, start_line, start_col);
+            tokens.push_back({"ID", lexeme, start_line, start_col});
         } else {
             // Manejar otros caracteres genéricos para la Fase 1
             std::string lexeme(1, advance());
