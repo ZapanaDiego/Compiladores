@@ -1,3 +1,13 @@
+// Bridge de comunicación con C++
+window.analyzeCode = function(code) {
+  return new Promise((resolve) => {
+    window.showResults = function(jsonStr) {
+      resolve(jsonStr);
+    };
+    window.webkit.messageHandlers.ipc.postMessage(code);
+  });
+};
+
 // Manejo de pestañas
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {

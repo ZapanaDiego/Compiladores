@@ -15,8 +15,9 @@ int SymbolTable::insertOrGet(const std::string& lexeme) {
 void SymbolTable::exportToFile(const std::string& filepath) const {
     std::ofstream out(filepath);
     if (out.is_open()) {
+        out << "Posición\tIdentificador\n";
         for (size_t i = 0; i < symbols_list.size(); ++i) {
-            out << i << "\t" << symbols_list[i] << "\n";
+            out << i << "\t\t" << symbols_list[i] << "\n";
         }
     }
 }

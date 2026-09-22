@@ -52,8 +52,9 @@ static void execute_analysis_and_export(const std::string& source_code, std::str
     // Errores
     std::ofstream out_errors("output/errores.txt");
     if (out_errors.is_open()) {
+        out_errors << "Línea\tColumna\tLexema\tResultado\n";
         for (const auto& e : output.errors) {
-            out_errors << "Error Léxico: " << e.lexeme << " en L:" << e.line << " C:" << e.col << "\n";
+            out_errors << e.line << "\t" << e.col << "\t" << e.lexeme << "\tERROR_LEXICO\n";
         }
     }
 
@@ -79,7 +80,7 @@ static void on_script_message(WebKitUserContentManager* manager,
 
     WebKitWebView* webview = WEBKIT_WEB_VIEW(user_data);
     webkit_web_view_evaluate_javascript(webview, script.c_str(), -1,
-                                        nullptr, nullptr, nullptr, nullptr);
+                                        nullptr, nullptr, nullptr, nullptr, nullptr);
 }
 
 int main(int argc, char* argv[]) {
@@ -113,7 +114,11 @@ int main(int argc, char* argv[]) {
 
     std::string html_content = read_file("ui/index.html");
     if (!html_content.empty()) {
-        webkit_web_view_load_html(WEBKIT_WEB_VIEW(webview), html_content.c_str(), nullptr);
+        gchar* current_dir = g_get_current_dir();
+        std::string base_uri = "file://" + std::string(current_dir) + "/ui/";
+        g_free(current_dir);
+        
+        webkit_web_view_load_html(WEBKIT_WEB_VIEW(webview), html_content.c_str(), base_uri.c_str());
     }
 
     gtk_container_add(GTK_CONTAINER(window), webview);

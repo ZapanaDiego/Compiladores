@@ -1,0 +1,4 @@
+Posición	Identificador
+0		edad
+1		promedio
+2		errorLexico

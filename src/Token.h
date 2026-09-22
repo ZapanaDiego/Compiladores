@@ -20,19 +20,19 @@ inline std::string tokenTypeToString(TokenType type) {
         case TokenType::NUM_DEC: return "NUM_DEC";
         case TokenType::ID: return "ID";
         case TokenType::TEXTO: return "TEXTO";
-        case TokenType::KW_INT: return "KW_INT";
-        case TokenType::KW_FLOAT: return "KW_FLOAT";
-        case TokenType::KW_CHAR: return "KW_CHAR";
-        case TokenType::KW_BOOLEAN: return "KW_BOOLEAN";
-        case TokenType::KW_VOID: return "KW_VOID";
-        case TokenType::KW_IF: return "KW_IF";
-        case TokenType::KW_ELSE: return "KW_ELSE";
-        case TokenType::KW_FOR: return "KW_FOR";
-        case TokenType::KW_WHILE: return "KW_WHILE";
-        case TokenType::KW_SCANF: return "KW_SCANF";
-        case TokenType::KW_PRINTLN: return "KW_PRINTLN";
-        case TokenType::KW_MAIN: return "KW_MAIN";
-        case TokenType::KW_RETURN: return "KW_RETURN";
+        case TokenType::KW_INT: return "INT";
+        case TokenType::KW_FLOAT: return "FLOAT";
+        case TokenType::KW_CHAR: return "CHAR";
+        case TokenType::KW_BOOLEAN: return "BOOLEAN";
+        case TokenType::KW_VOID: return "VOID";
+        case TokenType::KW_IF: return "IF";
+        case TokenType::KW_ELSE: return "ELSE";
+        case TokenType::KW_FOR: return "FOR";
+        case TokenType::KW_WHILE: return "WHILE";
+        case TokenType::KW_SCANF: return "SCANF";
+        case TokenType::KW_PRINTLN: return "PRINTLN";
+        case TokenType::KW_MAIN: return "MAIN";
+        case TokenType::KW_RETURN: return "RETURN";
         case TokenType::UNKNOWN: return "UNKNOWN";
         case TokenType::END_OF_FILE: return "END_OF_FILE";
         default: return "UNKNOWN";
@@ -48,7 +48,7 @@ struct Token {
 
     std::string toString() const {
         if (type == TokenType::ID) {
-            return "<ID, " + std::to_string(attribute) + ">";
+            return "<ID," + std::to_string(attribute) + ">";
         }
         return "<" + tokenTypeToString(type) + ">";
     }
