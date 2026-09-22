@@ -1,0 +1,22 @@
+# Ejecutables generados
+lexlp
+*.exe
+*.out
+*.app
+
+# Archivos objeto y librerías compiladas
+*.o
+*.a
+*.so
+*.dylib
+
+# Archivos de salida/reportes generados por la ejecución
+output/*.txt
+
+# Archivos temporales y del sistema / editor
+*~
+*.swp
+*.tmp
+.DS_Store
+.vscode/
+.idea/
