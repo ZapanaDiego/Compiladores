@@ -1,80 +1,147 @@
 #include "Lexer.h"
+#include "SymbolTable.h"
+#include <unordered_map>
+#include <sstream>
 #include <cctype>
 
-Lexer::Lexer(const std::string& input) : input(input), pos(0), current_line(1), current_column(1) {}
+std::optional<TokenType> Lexer::check_keyword(const std::string& lexeme) {
+    static const std::unordered_map<std::string, TokenType> keywords = {
+        {"int", TokenType::KW_INT},
+        {"float", TokenType::KW_FLOAT},
+        {"char", TokenType::KW_CHAR},
+        {"boolean", TokenType::KW_BOOLEAN},
+        {"void", TokenType::KW_VOID},
+        {"if", TokenType::KW_IF},
+        {"else", TokenType::KW_ELSE},
+        {"for", TokenType::KW_FOR},
+        {"while", TokenType::KW_WHILE},
+        {"scanf", TokenType::KW_SCANF},
+        {"println", TokenType::KW_PRINTLN},
+        {"main", TokenType::KW_MAIN},
+        {"return", TokenType::KW_RETURN}
+    };
 
-char Lexer::peek() {
-    if (isAtEnd()) return '\0';
-    return input[pos];
-}
-
-char Lexer::advance() {
-    char c = input[pos++];
-    if (c == '\n') {
-        current_line++;
-        current_column = 1;
-    } else {
-        current_column++;
+    auto it = keywords.find(lexeme);
+    if (it != keywords.end()) {
+        return it->second;
     }
-    return c;
+    return std::nullopt;
 }
 
-bool Lexer::isAtEnd() {
-    return pos >= input.length();
-}
-
-void Lexer::skipWhitespace() {
-    while (!isAtEnd()) {
-        char c = peek();
-        if (c == ' ' || c == '\r' || c == '\t' || c == '\n') {
-            advance();
-        } else {
-            break;
-        }
-    }
-}
-
-std::vector<Token> Lexer::tokenize() {
+LexerOutput Lexer::analyze(const std::string& input, SymbolTable& symTable) {
     std::vector<Token> tokens;
-    
-    while (!isAtEnd()) {
-        skipWhitespace();
-        if (isAtEnd()) break;
-        
-        int start_col = current_column;
-        int start_line = current_line;
-        char c = peek();
-        
-        if (std::isdigit(c)) {
-            std::string lexeme;
-            bool has_dot = false;
-            
-            while (!isAtEnd() && std::isdigit(peek())) {
-                lexeme += advance();
+    std::vector<LexerError> errors;
+
+    const auto& chars = input;
+    int len = static_cast<int>(chars.size());
+    int i = 0;
+    int line = 1;
+    int col = 1;
+
+    while (i < len) {
+        char c = chars[i];
+
+        if (c == '\n') {
+            line++;
+            col = 1;
+            i++;
+            continue;
+        } else if (c == '\r' || c == ' ' || c == '\t') {
+            col++;
+            i++;
+            continue;
+        }
+
+        if (std::isalpha(static_cast<unsigned char>(c)) || c == '_') {
+            int start_col = col;
+            std::string ident;
+
+            while (i < len && (std::isalnum(static_cast<unsigned char>(chars[i])) || chars[i] == '_')) {
+                ident += chars[i];
+                i++;
+                col++;
             }
-            
-            if (peek() == '.' && pos + 1 < input.length() && std::isdigit(input[pos + 1])) {
-                has_dot = true;
-                lexeme += advance(); // Consume el punto '.'
-                while (!isAtEnd() && std::isdigit(peek())) {
-                    lexeme += advance();
+
+            auto kw = check_keyword(ident);
+            if (kw.has_value()) {
+                tokens.push_back(Token{kw.value(), ident, -1, line, start_col});
+            } else {
+                int attr = symTable.insertOrGet(ident);
+                tokens.push_back(Token{TokenType::ID, ident, attr, line, start_col});
+            }
+            continue;
+        }
+
+        if (c == '"') {
+            int start_col = col;
+            int start_line = line;
+            std::string str_val;
+            str_val += '"';
+            i++;
+            col++;
+            bool closed = false;
+
+            while (i < len) {
+                char current = chars[i];
+                if (current == '\n') break;
+                if (current == '\\') {
+                    str_val += '\\';
+                    i++; col++;
+                    if (i < len) {
+                        str_val += chars[i];
+                        i++; col++;
+                    }
+                    continue;
+                }
+                if (current == '"') {
+                    str_val += '"';
+                    i++; col++;
+                    closed = true;
+                    break;
+                }
+                str_val += current;
+                i++; col++;
+            }
+
+            if (closed) {
+                tokens.push_back(Token{TokenType::TEXTO, str_val, -1, start_line, start_col});
+            } else {
+                errors.push_back(LexerError{start_line, start_col, str_val, "Cadena de texto no cerrada"});
+            }
+            continue;
+        }
+
+        if (std::isdigit(static_cast<unsigned char>(c))) {
+            int start_col = col;
+            std::string num_str;
+            bool is_decimal = false;
+
+            while (i < len && std::isdigit(static_cast<unsigned char>(chars[i]))) {
+                num_str += chars[i];
+                i++; col++;
+            }
+
+            if (i < len && chars[i] == '.') {
+                if (i + 1 < len && std::isdigit(static_cast<unsigned char>(chars[i + 1]))) {
+                    is_decimal = true;
+                    num_str += '.'; 
+                    i++; col++;
+                    while (i < len && std::isdigit(static_cast<unsigned char>(chars[i]))) {
+                        num_str += chars[i];
+                        i++; col++;
+                    }
                 }
             }
-            
-            tokens.push_back({has_dot ? "NUM_DEC" : "NUM_INT", lexeme, start_line, start_col});
-        } else if (std::isalpha(c) || c == '_') {
-            std::string lexeme;
-            while (!isAtEnd() && (std::isalnum(peek()) || peek() == '_')) {
-                lexeme += advance();
-            }
-            symbolTable.insert_or_update(lexeme, start_line, start_col);
-            tokens.push_back({"ID", lexeme, start_line, start_col});
-        } else {
-            // Manejar otros caracteres genéricos para la Fase 1
-            std::string lexeme(1, advance());
-            tokens.push_back({"DESCONOCIDO", lexeme, start_line, start_col});
+
+            TokenType ttype = is_decimal ? TokenType::NUM_DEC : TokenType::NUM_INT;
+            tokens.push_back(Token{ttype, num_str, -1, line, start_col});
+            continue;
         }
+
+        errors.push_back(LexerError{line, col, std::string(1, c), "Simbolo no reconocido"});
+        i++;
+        col++;
     }
-    
-    return tokens;
+
+    return LexerOutput{tokens, errors, symTable.to_json()};
 }

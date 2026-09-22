@@ -1,25 +1,14 @@
-#pragma once
-#include <string>
-#include <vector>
+#ifndef LEXER_H
+#define LEXER_H
 
 #include "Token.h"
-#include "SymbolTable.h"
+#include <string>
+#include <optional>
 
 class Lexer {
 public:
-    Lexer(const std::string& input);
-    std::vector<Token> tokenize();
-    const SymbolTable& getSymbolTable() const { return symbolTable; }
-
-private:
-    std::string input;
-    size_t pos;
-    int current_line;
-    int current_column;
-    SymbolTable symbolTable;
-
-    char peek();
-    char advance();
-    bool isAtEnd();
-    void skipWhitespace();
+    static std::optional<TokenType> check_keyword(const std::string& lexeme);
+    static LexerOutput analyze(const std::string& input, SymbolTable& symTable);
 };
+
+#endif // LEXER_H

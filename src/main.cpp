@@ -1,143 +1,124 @@
 #include "Lexer.h"
-#include <nlohmann/json.hpp>
+#include "SymbolTable.h"
 #include <gtk/gtk.h>
 #include <webkit2/webkit2.h>
 #include <fstream>
 #include <sstream>
-#include <iostream>
 #include <string>
+#include <iostream>
 
-using json = nlohmann::json;
-
-// Widget global del WebView para poder llamar eval desde el callback
-static WebKitWebView *g_webview = nullptr;
-
-// Lee el contenido de un archivo y lo retorna como string
-static std::string readFile(const std::string &filepath) {
-    std::ifstream file(filepath);
+static std::string read_file(const std::string& path) {
+    std::ifstream file(path);
     if (!file.is_open()) {
-        std::cerr << "Error: No se pudo abrir " << filepath << std::endl;
+        std::cerr << "Error: No se pudo abrir el archivo: " << path << std::endl;
         return "";
     }
-    std::stringstream buf;
-    buf << file.rdbuf();
-    return buf.str();
+    std::ostringstream ss;
+    ss << file.rdbuf();
+    return ss.str();
 }
 
-// Escapa un string para incrustarlo de forma segura dentro de un literal JS
-static std::string jsEscape(const std::string &s) {
-    std::string out;
-    out.reserve(s.size() + 64);
-    for (unsigned char c : s) {
-        if (c == '\\') out += "\\\\";
-        else if (c == '\'') out += "\\'";
-        else if (c == '\n') out += "\\n";
-        else if (c == '\r') out += "\\r";
-        else if (c == '\0') out += "\\0";
-        else out += c;
+static std::string escape_for_js(const std::string& s) {
+    std::string result;
+    result.reserve(s.size());
+    for (char c : s) {
+        switch (c) {
+            case '\\': result += "\\\\"; break;
+            case '\'': result += "\\'";  break;
+            case '\n': result += "\\n";  break;
+            case '\r': result += "\\r";  break;
+            default:   result += c;      break;
+        }
     }
-    return out;
+    return result;
 }
 
-// Callback que se ejecuta cuando JS llama a window.webkit.messageHandlers.external.postMessage(msg)
-static void on_message(WebKitUserContentManager *,
-                       WebKitJavascriptResult *result,
-                       gpointer) {
-    // Obtener el string enviado desde JS
-    JSCValue *value = webkit_javascript_result_get_js_value(result);
-    char *raw = jsc_value_to_string(value);
-    if (!raw) return;
-
-    std::string msg(raw);
-    g_free(raw);
-
-    // Deserializar: JS envía { id, code }
-    json req;
-    try {
-        req = json::parse(msg);
-    } catch (...) {
-        std::cerr << "Error: JSON inválido desde JS\n";
-        return;
+static void execute_analysis_and_export(const std::string& source_code, std::string& json_output) {
+    SymbolTable symTable;
+    LexerOutput output = Lexer::analyze(source_code, symTable);
+    
+    // Archivo de Tokens (Formato exigido por la entrega)
+    std::ofstream out_tokens("output/tokens.txt");
+    if (out_tokens.is_open()) {
+        for (const auto& t : output.tokens) {
+            out_tokens << t.toString() << " ";
+        }
+        out_tokens << "\n";
     }
 
-    std::string callId   = req.value("id", "");
-    std::string code     = req.value("code", "");
+    // Tabla de Símbolos (Formato exigido por la entrega)
+    symTable.exportToFile("output/tabla_simbolos.txt");
 
-    // Ejecutar análisis léxico
-    Lexer lexer(code);
-    std::vector<Token> tokens = lexer.tokenize();
-
-    json result_json = json::array();
-    for (const auto &tok : tokens) {
-        result_json.push_back({
-            {"tipo",    tok.type},
-            {"lexema",  tok.lexeme},
-            {"linea",   tok.line},
-            {"columna", tok.column}
-        });
+    // Errores
+    std::ofstream out_errors("output/errores.txt");
+    if (out_errors.is_open()) {
+        for (const auto& e : output.errors) {
+            out_errors << "Error Léxico: " << e.lexeme << " en L:" << e.line << " C:" << e.col << "\n";
+        }
     }
 
-    // Devolver resultado a JS via eval
-    std::string payload = jsEscape(result_json.dump());
-    std::string js = "window.__lexlpResolve('" + jsEscape(callId) + "', JSON.parse('" + payload + "'));";
-
-    webkit_web_view_evaluate_javascript(g_webview, js.c_str(), -1, nullptr, nullptr, nullptr, nullptr, nullptr);
+    json_output = output.to_json();
 }
 
-int main(int argc, char *argv[]) {
+static void on_script_message(WebKitUserContentManager* manager,
+                               WebKitJavascriptResult* js_result,
+                               gpointer user_data) {
+    (void)manager;
+
+    JSCValue* value = webkit_javascript_result_get_js_value(js_result);
+    if (!jsc_value_is_string(value)) return;
+
+    gchar* source_code_raw = jsc_value_to_string(value);
+    std::string source_code(source_code_raw);
+    g_free(source_code_raw);
+
+    std::string json;
+    execute_analysis_and_export(source_code, json);
+
+    std::string script = "showResults('" + escape_for_js(json) + "')";
+
+    WebKitWebView* webview = WEBKIT_WEB_VIEW(user_data);
+    webkit_web_view_evaluate_javascript(webview, script.c_str(), -1,
+                                        nullptr, nullptr, nullptr, nullptr);
+}
+
+int main(int argc, char* argv[]) {
+    // Modo CLI estricto para revisión automática del profesor
+    if (argc == 2) {
+        std::string source_code = read_file(argv[1]);
+        if (source_code.empty()) return 1;
+        
+        std::string dummy_json;
+        execute_analysis_and_export(source_code, dummy_json);
+        std::cout << "Análisis léxico completado exitosamente en modo CLI." << std::endl;
+        std::cout << "Resultados guardados en la carpeta output/" << std::endl;
+        return 0;
+    }
+
+    // Modo GUI Normal
     gtk_init(&argc, &argv);
 
-    // --- Ventana principal ---
-    GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    gtk_window_set_title(GTK_WINDOW(window), "LexLP: Analizador Léxico (Fase 1)");
-    gtk_window_set_default_size(GTK_WINDOW(window), 900, 650);
+    GtkWidget* window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    gtk_window_set_title(GTK_WINDOW(window), "LexLP Studio");
+    gtk_window_set_default_size(GTK_WINDOW(window), 1000, 700);
     g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), nullptr);
 
-    // --- Gestor de contenido de usuario (para el canal de mensajes JS->C++) ---
-    WebKitUserContentManager *manager = webkit_user_content_manager_new();
-    webkit_user_content_manager_register_script_message_handler(manager, "external");
-    g_signal_connect(manager, "script-message-received::external",
-                     G_CALLBACK(on_message), nullptr);
+    WebKitUserContentManager* content_manager = webkit_user_content_manager_new();
+    webkit_user_content_manager_register_script_message_handler(content_manager, "ipc");
 
-    // --- WebView ---
-    g_webview = WEBKIT_WEB_VIEW(webkit_web_view_new_with_user_content_manager(manager));
+    GtkWidget* webview = webkit_web_view_new_with_user_content_manager(content_manager);
 
-    // Incrustar el canal de comunicación JS->C++ antes de que cargue la página
-    const char *bridgeScript =
-        "window.__lexlpCallbacks = {};"
-        "window.analizarCodigo = function(code) {"
-        "  return new Promise(function(resolve, reject) {"
-        "    var id = Math.random().toString(36).substr(2);"
-        "    window.__lexlpCallbacks[id] = { resolve: resolve, reject: reject };"
-        "    window.webkit.messageHandlers.external.postMessage(JSON.stringify({ id: id, code: code }));"
-        "  });"
-        "};"
-        "window.__lexlpResolve = function(id, tokens) {"
-        "  if (window.__lexlpCallbacks[id]) {"
-        "    window.__lexlpCallbacks[id].resolve(tokens);"
-        "    delete window.__lexlpCallbacks[id];"
-        "  }"
-        "};";
+    g_signal_connect(content_manager, "script-message-received::ipc",
+                     G_CALLBACK(on_script_message), webview);
 
-    WebKitUserScript *script = webkit_user_script_new(
-        bridgeScript,
-        WEBKIT_USER_CONTENT_INJECT_ALL_FRAMES,
-        WEBKIT_USER_SCRIPT_INJECT_AT_DOCUMENT_START,
-        nullptr, nullptr);
-    webkit_user_content_manager_add_script(manager, script);
-    webkit_user_script_unref(script);
-
-    // Cargar index.html
-    std::string html = readFile("index.html");
-    if (html.empty()) {
-        html = "<h1 style='color:red;font-family:monospace'>Error: no se encontró index.html</h1>";
+    std::string html_content = read_file("ui/index.html");
+    if (!html_content.empty()) {
+        webkit_web_view_load_html(WEBKIT_WEB_VIEW(webview), html_content.c_str(), nullptr);
     }
-    webkit_web_view_load_html(g_webview, html.c_str(), "file:///");
 
-    // Poner el WebView dentro de la ventana
-    gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(g_webview));
+    gtk_container_add(GTK_CONTAINER(window), webview);
     gtk_widget_show_all(window);
-
     gtk_main();
+
     return 0;
 }

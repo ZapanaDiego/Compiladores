@@ -1,19 +1,33 @@
 #include "SymbolTable.h"
+#include <fstream>
 
-void SymbolTable::insert_or_update(const std::string& name, std::size_t line, std::size_t col) {
-    auto it = symbols.find(name);
-    if (it != symbols.end()) {
-        it->second.occurrences++;
-    } else {
-        symbols[name] = {name, "ID", line, col, 1};
+int SymbolTable::insertOrGet(const std::string& lexeme) {
+    auto it = symbols_map.find(lexeme);
+    if (it != symbols_map.end()) {
+        return it->second;
+    }
+    int index = symbols_list.size();
+    symbols_list.push_back(lexeme);
+    symbols_map[lexeme] = index;
+    return index;
+}
+
+void SymbolTable::exportToFile(const std::string& filepath) const {
+    std::ofstream out(filepath);
+    if (out.is_open()) {
+        for (size_t i = 0; i < symbols_list.size(); ++i) {
+            out << i << "\t" << symbols_list[i] << "\n";
+        }
     }
 }
 
-std::vector<SymbolEntry> SymbolTable::to_vector() const {
-    std::vector<SymbolEntry> vec;
-    vec.reserve(symbols.size());
-    for (const auto& pair : symbols) {
-        vec.push_back(pair.second);
+std::string SymbolTable::to_json() const {
+    std::ostringstream oss;
+    oss << "[";
+    for (size_t i = 0; i < symbols_list.size(); ++i) {
+        if (i > 0) oss << ",";
+        oss << "{\"pos\":" << i << ",\"id\":\"" << symbols_list[i] << "\"}";
     }
-    return vec;
+    oss << "]";
+    return oss.str();
 }
