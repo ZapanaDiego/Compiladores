@@ -36,45 +36,52 @@ void Lexer::skipWhitespace() {
 
 std::vector<Token> Lexer::tokenize() {
     std::vector<Token> tokens;
-    
+
     while (!isAtEnd()) {
         skipWhitespace();
         if (isAtEnd()) break;
-        
-        int start_col = current_column;
-        int start_line = current_line;
+
+        std::size_t start_col = current_column;
+        std::size_t start_line = current_line;
         char c = peek();
-        
+
         if (std::isdigit(c)) {
             std::string lexeme;
-            bool has_dot = false;
-            
             while (!isAtEnd() && std::isdigit(peek())) {
                 lexeme += advance();
             }
-            
             if (peek() == '.' && pos + 1 < input.length() && std::isdigit(input[pos + 1])) {
-                has_dot = true;
-                lexeme += advance(); // Consume el punto '.'
+                lexeme += advance();
                 while (!isAtEnd() && std::isdigit(peek())) {
                     lexeme += advance();
                 }
             }
-            
-            tokens.push_back({has_dot ? "NUM_DEC" : "NUM_INT", lexeme, start_line, start_col});
+            tokens.push_back({TokenType::NUMBER, lexeme, start_line, start_col});
+
         } else if (std::isalpha(c) || c == '_') {
             std::string lexeme;
             while (!isAtEnd() && (std::isalnum(peek()) || peek() == '_')) {
                 lexeme += advance();
             }
             symbolTable.insert_or_update(lexeme, start_line, start_col);
-            tokens.push_back({"ID", lexeme, start_line, start_col});
+            tokens.push_back({TokenType::IDENTIFIER, lexeme, start_line, start_col});
+
+        } else if (c == '"') {
+            std::string lexeme;
+            lexeme += advance(); // comilla inicial
+            bool closed = false;
+            while (!isAtEnd()) {
+                char ch = advance();
+                lexeme += ch;
+                if (ch == '"') { closed = true; break; }
+            }
+            tokens.push_back({closed ? TokenType::STRING : TokenType::ERROR, lexeme, start_line, start_col});
+
         } else {
-            // Manejar otros caracteres genéricos para la Fase 1
             std::string lexeme(1, advance());
-            tokens.push_back({"DESCONOCIDO", lexeme, start_line, start_col});
+            tokens.push_back({TokenType::ERROR, lexeme, start_line, start_col});
         }
     }
-    
+
     return tokens;
 }

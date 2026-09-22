@@ -124,4 +124,39 @@ function renderErrors(errors) {
       </tr>
     `;
   });
+
+  async function cargarResultados() {
+  const res = await fetch("../output/data.json");
+  const data = await res.json();
+  renderSymbolTable(data.symbol_table);
+}
+
+function renderSymbolTable(symbolTable) {
+  const body = document.getElementById("symbol-table-body");
+  body.innerHTML = "";
+  symbolTable.forEach(entry => {
+    const row = document.createElement("tr");
+    row.classList.add(cssClassFor(entry.type));
+    row.innerHTML = `
+      <td>${entry.name}</td>
+      <td>${entry.type}</td>
+      <td>${entry.line}:${entry.col}</td>
+      <td>${entry.occurrences}</td>
+    `;
+    body.appendChild(row);
+  });
+}
+
+function cssClassFor(type) {
+  switch (type) {
+    case "KEYWORD": return "tok-keyword";
+    case "ID": return "tok-id";
+    case "NUMBER": return "tok-number";
+    case "STRING": return "tok-string";
+    case "ERROR": return "tok-error";
+    default: return "";
+  }
+}
+
+cargarResultados();
 }

@@ -166,3 +166,21 @@ textarea {
 .data-table th { background: var(--subpanel-bg); color: var(--accent); }
 .errors-table td { color: var(--error); }
 .empty-cell, .empty-state { color: var(--text-muted); text-align: center; padding: 20px; }
+
+#symbol-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+#symbol-table th, #symbol-table td {
+  border: 1px solid #444;
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.tok-keyword { background-color: #d0bfff; color: #2e1065; }
+.tok-id      { background-color: #a5d8ff; color: #1864ab; }
+.tok-number  { background-color: #b2f2bb; color: #2b8a3e; }
+.tok-string  { background-color: #ffec99; color: #8a5300; }
+.tok-error   { background-color: #ffa8a8; color: #c92a2a; }
