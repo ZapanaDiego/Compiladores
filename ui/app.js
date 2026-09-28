@@ -62,11 +62,11 @@ async function executeAnalysis() {
     renderSymbolTable(data.symbols || []);
     renderErrors(data.errors || []);
   } catch (err) {
-    console.error("Error al procesar la comunicación con Rust:", err);
+    console.error("Error al procesar la comunicación con c++:", err);
   }
 }
 
-// Módulo 1: Renderizado de Tokens
+// Módulo 1: Renderizado de Tokenss
 function renderTokens(tokens) {
   const container = document.getElementById('tokensContainer');
   document.getElementById('tokenCount').textContent = tokens.length;

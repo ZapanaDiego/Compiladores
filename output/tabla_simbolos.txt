@@ -1,4 +1,2 @@
 Posición	Identificador
-0		edad
-1		promedio
-2		errorLexico
+0		nota
