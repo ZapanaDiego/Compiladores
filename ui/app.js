@@ -81,9 +81,23 @@ function renderTokens(tokens) {
     const tag = document.createElement('div');
     const isID = t.type === 'ID';
     const isNum = t.type === 'NUM_INT' || t.type === 'NUM_DEC';
+    const isKw = ['INT','FLOAT','CHAR','BOOLEAN','VOID','IF','ELSE','FOR','WHILE','SCANF','PRINTLN','MAIN','RETURN'].includes(t.type);
+    const isOp = ['=', '+', '-', '*', '/', '%', '&&', '||', '!', 'COMP'].includes(t.type);
+    const isSym = ['(', ')', '[', ']', '{', '}', ',', ';'].includes(t.type);
+    const isStr = t.type === 'TEXTO';
     
-    tag.className = `token-tag ${isID ? 'id-token' : ''} ${isNum ? 'num-token' : ''}`;
-    // Formato de salida exigido: <ID, pos> o <TIPO>[cite: 3]
+    let extraClass = '';
+    if (isID) extraClass = 'id-token';
+    else if (isNum) extraClass = 'num-token';
+    else if (isKw) extraClass = 'kw-token';
+    else if (isOp) extraClass = 'op-token';
+    else if (isSym) extraClass = 'sym-token';
+    else if (isStr) extraClass = 'str-token';
+
+    tag.className = `token-tag ${extraClass}`;
+    tag.title = `Lexema: ${t.lexeme} | Línea: ${t.line}, Columna: ${t.col}`;
+
+    // Formato de salida exigido: <ID, pos> o <TIPO>
     tag.textContent = t.attr !== null && t.attr !== undefined 
       ? `<${t.type}, ${t.attr}>` 
       : `<${t.type}>`;

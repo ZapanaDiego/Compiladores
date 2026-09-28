@@ -150,6 +150,10 @@ textarea {
 }
 .token-tag.id-token { border-color: var(--accent); color: var(--accent); }
 .token-tag.num-token { border-color: var(--success); color: var(--success); }
+.token-tag.kw-token { border-color: #cba6f7; color: #cba6f7; font-weight: bold; }
+.token-tag.op-token { border-color: #fab387; color: #fab387; font-weight: bold; }
+.token-tag.sym-token { border-color: #585b70; color: #bac2de; }
+.token-tag.str-token { border-color: #a6e3a1; color: #a6e3a1; }
 
 .data-table {
   width: 100%;

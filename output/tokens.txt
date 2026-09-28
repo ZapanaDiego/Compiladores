@@ -1,1 +1,1 @@
-<NUM_INT> <NUM_DEC> <NUM_DEC> <NUM_INT> <ID,0> <INT> 
+

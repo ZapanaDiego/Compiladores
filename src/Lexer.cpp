@@ -72,13 +72,22 @@ LexerOutput Lexer::analyze(const std::string& input, SymbolTable& symTable) {
             continue;
         }
 
-        if (c == '"') {
+        bool is_open_quote = (c == '"');
+        bool is_utf8_quote = (!is_open_quote && static_cast<unsigned char>(c) == 0xe2 && i + 2 < len &&
+                              static_cast<unsigned char>(chars[i+1]) == 0x80 &&
+                              (static_cast<unsigned char>(chars[i+2]) == 0x9c || static_cast<unsigned char>(chars[i+2]) == 0x9d));
+
+        if (is_open_quote || is_utf8_quote) {
             int start_col = col;
             int start_line = line;
-            std::string str_val;
-            str_val += '"';
-            i++;
-            col++;
+            std::string str_val = "\"";
+            if (is_open_quote) {
+                i++;
+                col++;
+            } else {
+                i += 3;
+                col++;
+            }
             bool closed = false;
 
             while (i < len) {
@@ -99,6 +108,15 @@ LexerOutput Lexer::analyze(const std::string& input, SymbolTable& symTable) {
                     closed = true;
                     break;
                 }
+                if (static_cast<unsigned char>(current) == 0xe2 && i + 2 < len &&
+                    static_cast<unsigned char>(chars[i+1]) == 0x80 &&
+                    (static_cast<unsigned char>(chars[i+2]) == 0x9c || static_cast<unsigned char>(chars[i+2]) == 0x9d)) {
+                    str_val += '"';
+                    i += 3;
+                    col++;
+                    closed = true;
+                    break;
+                }
                 str_val += current;
                 i++; col++;
             }
@@ -111,30 +129,217 @@ LexerOutput Lexer::analyze(const std::string& input, SymbolTable& symTable) {
             continue;
         }
 
+        // Manejo robusto de números (Enteros, Decimales y Mal Formados como 1.2.3 o 1.2a)
         if (std::isdigit(static_cast<unsigned char>(c))) {
             int start_col = col;
             std::string num_str;
-            bool is_decimal = false;
+            int dot_count = 0;
+            bool has_invalid_chars = false;
 
-            while (i < len && std::isdigit(static_cast<unsigned char>(chars[i]))) {
-                num_str += chars[i];
-                i++; col++;
-            }
+            while (i < len) {
+                char current = chars[i];
 
-            if (i < len && chars[i] == '.') {
-                if (i + 1 < len && std::isdigit(static_cast<unsigned char>(chars[i + 1]))) {
-                    is_decimal = true;
-                    num_str += '.'; 
+                if (std::isdigit(static_cast<unsigned char>(current))) {
+                    num_str += current;
                     i++; col++;
-                    while (i < len && std::isdigit(static_cast<unsigned char>(chars[i]))) {
-                        num_str += chars[i];
-                        i++; col++;
-                    }
+                } else if (current == '.') {
+                    dot_count++;
+                    num_str += current;
+                    i++; col++;
+                } else if (std::isalpha(static_cast<unsigned char>(current)) || current == '_') {
+                    has_invalid_chars = true;
+                    num_str += current;
+                    i++; col++;
+                } else {
+                    break;
                 }
             }
 
-            TokenType ttype = is_decimal ? TokenType::NUM_DEC : TokenType::NUM_INT;
-            tokens.push_back(Token{ttype, num_str, -1, line, start_col});
+            // Validación de lexema numérico consolidado
+            if (dot_count > 1 || has_invalid_chars || num_str.back() == '.') {
+                errors.push_back(LexerError{line, start_col, num_str, "Numero mal formado"});
+            } else if (dot_count == 1) {
+                tokens.push_back(Token{TokenType::NUM_DEC, num_str, -1, line, start_col});
+            } else {
+                tokens.push_back(Token{TokenType::NUM_INT, num_str, -1, line, start_col});
+            }
+            continue;
+        }
+
+        // Comentarios de una línea (//.*\n) y Operador aritmético división (/)
+        if (c == '/') {
+            if (i + 1 < len && chars[i + 1] == '/') {
+                i += 2;
+                col += 2;
+                while (i < len && chars[i] != '\n') {
+                    i++;
+                    col++;
+                }
+                if (i < len && chars[i] == '\n') {
+                    line++;
+                    col = 1;
+                    i++;
+                }
+                continue;
+            } else {
+                tokens.push_back(Token{TokenType::DIV, "/", -1, line, col});
+                i++;
+                col++;
+                continue;
+            }
+        }
+
+        // Operador de asignación (=) y Operador relacional de igualdad (==)
+        if (c == '=') {
+            int start_col = col;
+            if (i + 1 < len && chars[i + 1] == '=') {
+                tokens.push_back(Token{TokenType::COMP, "==", -1, line, start_col});
+                i += 2;
+                col += 2;
+            } else {
+                tokens.push_back(Token{TokenType::ASSIGN, "=", -1, line, start_col});
+                i++;
+                col++;
+            }
+            continue;
+        }
+
+        // Operador lógico negación (!) y Operador relacional diferente (!=)
+        if (c == '!') {
+            int start_col = col;
+            if (i + 1 < len && chars[i + 1] == '=') {
+                tokens.push_back(Token{TokenType::COMP, "!=", -1, line, start_col});
+                i += 2;
+                col += 2;
+            } else {
+                tokens.push_back(Token{TokenType::NOT, "!", -1, line, start_col});
+                i++;
+                col++;
+            }
+            continue;
+        }
+
+        // Operadores relacionales (<, <=)
+        if (c == '<') {
+            int start_col = col;
+            if (i + 1 < len && chars[i + 1] == '=') {
+                tokens.push_back(Token{TokenType::COMP, "<=", -1, line, start_col});
+                i += 2;
+                col += 2;
+            } else {
+                tokens.push_back(Token{TokenType::COMP, "<", -1, line, start_col});
+                i++;
+                col++;
+            }
+            continue;
+        }
+
+        // Operadores relacionales (>, >=)
+        if (c == '>') {
+            int start_col = col;
+            if (i + 1 < len && chars[i + 1] == '=') {
+                tokens.push_back(Token{TokenType::COMP, ">=", -1, line, start_col});
+                i += 2;
+                col += 2;
+            } else {
+                tokens.push_back(Token{TokenType::COMP, ">", -1, line, start_col});
+                i++;
+                col++;
+            }
+            continue;
+        }
+
+        // Operador lógico AND (&&)
+        if (c == '&') {
+            int start_col = col;
+            if (i + 1 < len && chars[i + 1] == '&') {
+                tokens.push_back(Token{TokenType::AND, "&&", -1, line, start_col});
+                i += 2;
+                col += 2;
+            } else {
+                errors.push_back(LexerError{line, start_col, "&", "Simbolo no reconocido"});
+                i++;
+                col++;
+            }
+            continue;
+        }
+
+        // Operador lógico OR (||)
+        if (c == '|') {
+            int start_col = col;
+            if (i + 1 < len && chars[i + 1] == '|') {
+                tokens.push_back(Token{TokenType::OR, "||", -1, line, start_col});
+                i += 2;
+                col += 2;
+            } else {
+                errors.push_back(LexerError{line, start_col, "|", "Simbolo no reconocido"});
+                i++;
+                col++;
+            }
+            continue;
+        }
+
+        // Operadores aritméticos (+, -, *, %)
+        if (c == '+') {
+            tokens.push_back(Token{TokenType::PLUS, "+", -1, line, col});
+            i++; col++;
+            continue;
+        }
+        if (c == '-') {
+            tokens.push_back(Token{TokenType::MINUS, "-", -1, line, col});
+            i++; col++;
+            continue;
+        }
+        if (c == '*') {
+            tokens.push_back(Token{TokenType::MULT, "*", -1, line, col});
+            i++; col++;
+            continue;
+        }
+        if (c == '%') {
+            tokens.push_back(Token{TokenType::MOD, "%", -1, line, col});
+            i++; col++;
+            continue;
+        }
+
+        // Símbolos especiales: (, ), [, ], {, }, ,, ;
+        if (c == '(') {
+            tokens.push_back(Token{TokenType::LPAREN, "(", -1, line, col});
+            i++; col++;
+            continue;
+        }
+        if (c == ')') {
+            tokens.push_back(Token{TokenType::RPAREN, ")", -1, line, col});
+            i++; col++;
+            continue;
+        }
+        if (c == '[') {
+            tokens.push_back(Token{TokenType::LBRACKET, "[", -1, line, col});
+            i++; col++;
+            continue;
+        }
+        if (c == ']') {
+            tokens.push_back(Token{TokenType::RBRACKET, "]", -1, line, col});
+            i++; col++;
+            continue;
+        }
+        if (c == '{') {
+            tokens.push_back(Token{TokenType::LBRACE, "{", -1, line, col});
+            i++; col++;
+            continue;
+        }
+        if (c == '}') {
+            tokens.push_back(Token{TokenType::RBRACE, "}", -1, line, col});
+            i++; col++;
+            continue;
+        }
+        if (c == ',') {
+            tokens.push_back(Token{TokenType::COMMA, ",", -1, line, col});
+            i++; col++;
+            continue;
+        }
+        if (c == ';') {
+            tokens.push_back(Token{TokenType::SEMICOLON, ";", -1, line, col});
+            i++; col++;
             continue;
         }
 

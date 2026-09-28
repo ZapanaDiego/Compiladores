@@ -1,2 +1,2 @@
 Línea	Columna	Lexema	Resultado
-1	14	.	ERROR_LEXICO
+1	1	1.2.5	ERROR_LEXICO

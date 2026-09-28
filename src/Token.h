@@ -11,6 +11,11 @@ enum class TokenType {
     KW_INT, KW_FLOAT, KW_CHAR, KW_BOOLEAN, KW_VOID,
     KW_IF, KW_ELSE, KW_FOR, KW_WHILE,
     KW_SCANF, KW_PRINTLN, KW_MAIN, KW_RETURN,
+    ASSIGN,
+    PLUS, MINUS, MULT, DIV, MOD,
+    AND, OR, NOT,
+    COMP,
+    LPAREN, RPAREN, LBRACKET, RBRACKET, LBRACE, RBRACE, COMMA, SEMICOLON,
     UNKNOWN, END_OF_FILE
 };
 
@@ -33,6 +38,24 @@ inline std::string tokenTypeToString(TokenType type) {
         case TokenType::KW_PRINTLN: return "PRINTLN";
         case TokenType::KW_MAIN: return "MAIN";
         case TokenType::KW_RETURN: return "RETURN";
+        case TokenType::ASSIGN: return "=";
+        case TokenType::PLUS: return "+";
+        case TokenType::MINUS: return "-";
+        case TokenType::MULT: return "*";
+        case TokenType::DIV: return "/";
+        case TokenType::MOD: return "%";
+        case TokenType::AND: return "&&";
+        case TokenType::OR: return "||";
+        case TokenType::NOT: return "!";
+        case TokenType::COMP: return "COMP";
+        case TokenType::LPAREN: return "(";
+        case TokenType::RPAREN: return ")";
+        case TokenType::LBRACKET: return "[";
+        case TokenType::RBRACKET: return "]";
+        case TokenType::LBRACE: return "{";
+        case TokenType::RBRACE: return "}";
+        case TokenType::COMMA: return ",";
+        case TokenType::SEMICOLON: return ";";
         case TokenType::UNKNOWN: return "UNKNOWN";
         case TokenType::END_OF_FILE: return "END_OF_FILE";
         default: return "UNKNOWN";
