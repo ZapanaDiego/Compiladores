@@ -28,6 +28,24 @@ std::optional<TokenType> Lexer::check_keyword(const std::string& lexeme) {
     return std::nullopt;
 }
 
+static inline bool is_token_boundary(char ch) {
+    switch (ch) {
+        case ';': case ',':
+        case '(': case ')':
+        case '{': case '}':
+        case '[': case ']':
+        case '+': case '-':
+        case '*': case '/':
+        case '%': case '=':
+        case '<': case '>':
+        case '!': case '&':
+        case '|': case '"':
+            return true;
+        default:
+            return false;
+    }
+}
+
 LexerOutput Lexer::analyze(const std::string& input, SymbolTable& symTable) {
     std::vector<Token> tokens;
     std::vector<LexerError> errors;
@@ -343,9 +361,24 @@ LexerOutput Lexer::analyze(const std::string& input, SymbolTable& symTable) {
             continue;
         }
 
-        errors.push_back(LexerError{line, col, std::string(1, c), "Simbolo no reconocido"});
+        // Captura de símbolos y variables inválidas completas (ej: @variableInvalida, $precio)
+        int start_col = col;
+        std::string err_lexeme;
+        err_lexeme += c;
         i++;
         col++;
+
+        while (i < len) {
+            char next = chars[i];
+            if (next == ' ' || next == '\t' || next == '\r' || next == '\n' || is_token_boundary(next)) {
+                break;
+            }
+            err_lexeme += next;
+            i++;
+            col++;
+        }
+
+        errors.push_back(LexerError{line, start_col, err_lexeme, "Simbolo no reconocido"});
     }
 
     return LexerOutput{tokens, errors, symTable.to_json()};
