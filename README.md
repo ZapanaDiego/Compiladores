@@ -1,31 +1,35 @@
-```markdown
-# Carlos ++ — Analizador Léxico (Lenguaje LP)
+# LexLP Studio — Analizador Léxico (Lenguaje LP)
 
 [![Lenguaje](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://isocpp.org/)
-[![GUI](https://img.shields.io/badge/GUI-GTK%20%2B%20WebKit2-green.svg)](https://www.gtk.org/)
-[![Frontend](https://img.shields.io/badge/Frontend-HTML%20%2F%20CSS%20%2F%20JS-orange.svg)](https://developer.mozilla.org/)
+[![GUI](https://img.shields.io/badge/GUI-GTK%203%20%2B%20WebKit2GTK-green.svg)](https://www.gtk.org/)
+[![Frontend](https://img.shields.io/badge/Frontend-HTML5%20%2F%20CSS3%20%2F%20JS-orange.svg)](https://developer.mozilla.org/)
+[![Licencia](https://img.shields.io/badge/License-MIT-lightgrey.svg)](LICENSE)
 
-**Carlos ++** es la primera fase (Analizador Léxico) del compilador para el lenguaje de programación personalizado **LP**.
+**LexLP Studio** es el analizador léxico (Fase 1 del compilador) para el lenguaje de programación personalizado **LP**.
 
-El proyecto integra un motor de análisis léxico de alto rendimiento desarrollado en **C++** con una interfaz gráfica (GUI) híbrida e interactiva. El puente de comunicación (*bridge* IPC) se realiza mediante `index.html` utilizando la cabecera `webview.h` (GTK / WebKit2), el cual enlaza y renderiza la vista enriquecida construida en `lexer_ui.html`, `lexer_ui.css` y `lexer_ui.js`.
+El proyecto implementa una arquitectura híbrida de alto desempeño: un **backend en C++17** que procesa el flujo léxico, gestiona la tabla de símbolos y detecta errores en una sola pasada, conectado mediante un **puente IPC nativo (GTK 3 + WebKit2GTK)** a una **interfaz gráfica moderna (UI)** desarrollada con tecnologías web. Además, cuenta con un **modo CLI** optimizado para evaluación y pruebas automatizadas por terminal.
 
+---
 
 ## 🚀 Características Principales
 
-- **Motor Léxico (Backend C++):**
-  - Reconocimiento voraz (*greedy matching*) de palabras clave, identificadores, números enteros (`NUM_INT`), decimales (`NUM_DEC`), cadenas de texto y delimitadores.
-  - Soporte de *lookahead* de 1 carácter para distinción de operadores simples y dobles (`=`, `==`, `!`, `!=`, `/`, `//`, etc.).
-  - Normalización automática de comillas tipográficas UTF-8 (`“ ”`) a comillas estándar (`"`).
-  - Estrategia de **recuperación de errores**: registra todos los fallos léxicos en una sola pasada sin detener el proceso.
-- **Tabla de Símbolos en Tiempo Real:**
-  - Registro de identificadores únicos asignando atributos posicionales reusables (`<ID, attr>`) y conteo de referencias.
-- **Generación de Reportes en Disco (`output/`):**
-  - Exportación automática de resultados a archivos de texto plano: `tokens.txt`, `token.txt`, `tabla_simbolos.txt` y `errores.txt`.
-- **Interfaz Gráfica Híbrida:**
-  - `index.html`: Punto de encolación e integración IPC nativa con C++ vía `webview.h`.
-  - `lexer_ui.html`, `lexer_ui.css` y `lexer_ui.js`: Vista interactiva con editor de código, contador de líneas/columnas en tiempo real, pestañas de navegación y temizado de tokens.
-- **Suite de Pruebas (.lp):**
-  - Scripts predefinidos en `tests/` para evaluar casos básicos, cobertura completa, casos límite y detección de errores.
+* **Motor Léxico Integral (C++17):**
+  * Reconocimiento según la regla del prefijo más largo (*Maximal Munch*) y autómatas finitos deterministas (DFA).
+  * Soporte de *lookahead* para resolver operadores de 1 y 2 caracteres (`=`, `==`, `!`, `!=`, `<`, `<=`, `>`, `>=`, `&&`, `||`, `/`, `//`).
+  * Normalización automática de comillas tipográficas UTF-8 (`“ ”`) a comillas dobles estándar (`"`).
+  * Filtrado y descarte transparente de comentarios de una línea (`//.*\n`) actualizando filas y columnas.
+* **Manejo Robusto de Errores Léxicos (Sin Falsos Positivos):**
+  * **Números mal formados consolidados:** Cadenas inválidas como `1.2.3`, `1..2`, `42.` o `123abc` son absorbidas como un único error léxico en lugar de dividirse erróneamente en tokens parciales.
+  * **Identificadores inválidos agrupados:** Variables ilegales como `@variableInvalida` o `$precio` se marcan completas como error léxico, evitando contaminar la tabla de símbolos o emitir tokens `<ID>` falsos.
+  * **Cadenas no cerradas:** Detección de constantes de texto que no cierran comillas antes del salto de línea o fin de archivo.
+* **Tabla de Símbolos en Tiempo Real:**
+  * Almacenamiento en estructura híbrida (`std::unordered_map` y `std::vector`) para inserción y búsqueda en $O(1)$ garantizando orden secuencial sin identificadores duplicados.
+  * Asociación de atributos posicionales en el formato `<ID, pos>`.
+* **Doble Modo de Ejecución:**
+  * **Modo GUI (Escritorio):** IDE interactivo con selector desplegable de pruebas, visor de tokens por categorías, tabla de símbolos y lista de errores en vivo.
+  * **Modo CLI (Terminal):** Ejecución directa (`./lexlp archivo.lp`) diseñada para calificación automatizada.
+* **Exportación Automática a Disco (`output/`):**
+  * Genera tras cada análisis los archivos exigidos para la entrega: `tokens.txt`, `tabla_simbolos.txt` y `errores.txt`.
 
 ---
 
@@ -33,171 +37,183 @@ El proyecto integra un motor de análisis léxico de alto rendimiento desarrolla
 
 ```text
 .
-├── argo.toml               # Configuración del proyecto
-├── index.html              # Archivo principal de encolación e integración IPC C++ (WebView)
-├── lexer_ui.html           # Interfaz gráfica (Estructura DOM de la UI)
-├── lexer_ui.css            # Estilos visuales (Dark Mode y colores por tipo de token)
-├── lexer_ui.js             # Lógica cliente, formateo DOM e interacción con IPC
-├── lexlp                   # Ejecutable binario compilado
-├── Makefile                # Script de compilación automatizado
-├── webview.h               # Cabecera para el enlace nativo WebView / GTK
-├── README.md               # Documentación del proyecto
+├── Makefile                # Script de compilación (g++ C++17, GTK 3, WebKit2GTK)
+├── README.md               # Documentación general del proyecto
+├── lexlp                   # Binario ejecutable compilado
 ├── output/                 # Reportes generados en texto plano
-│   ├── errores.txt
-│   ├── tabla_simbolos.txt
-│   ├── tokens.txt
-│   └── token.txt
-├── src/                    # Código fuente del motor C++
-│   ├── Lexer.h / .cpp      # Algoritmo de recorrido y reconocimiento de tokens
-│   ├── SymbolTable.h / .cpp# Estructura e inserción en la tabla de símbolos
-│   ├── Token.h / .cpp      # Definición de estructuras y serialización a JSON
-│   └── main.cpp            # Punto de entrada C++, servidor IPC y carga del WebView
-├── tests/                  # Casos de prueba en lenguaje LP
-│   ├── prueba_basica.lp
-│   ├── prueba_completa.lp
-│   ├── prueba_errores.lp
-│   └── prueba_limite.lp
-└── ui/                     # Recursos auxiliares / fallback
-    ├── app.js
-    ├── index.html
-    └── style.css
-
-
-
----
-
-## ⚙️ Arquitectura del Sistema
-
-```text
-┌───────────────────────────────┐                             ┌───────────────────────────────┐
-│     Interfaz de Usuario       │     Código fuente (.lp)     │         Backend C++           │
-│                               │ ──────────────────────────► │                               │
-│  - lexer_ui.html (Vista UI)   │    postMessage(code)        │  - main.cpp (GTK/WebView)     │
-│  - lexer_ui.js (Lógica UI)    │                             │  - Lexer::analyze()           │
-│  - index.html (Encolación)    │ ◄────────────────────────── │  - SymbolTable                │
-└───────────────────────────────┘     showResults(jsonStr)    │  - Escritura en output/*.txt  │
-                                              JSON            └───────────────────────────────┘
-
+│   ├── errores.txt         # Reporte tabulado de errores léxicos
+│   ├── tabla_simbolos.txt  # Tabla de símbolos con identificadores únicos
+│   └── tokens.txt          # Secuencia lineal continua de tokens
+├── src/                    # Código fuente del motor en C++
+│   ├── Lexer.h / .cpp      # Escáner léxico, DFA, lookahead y reglas
+│   ├── SymbolTable.h / .cpp# Tabla de símbolos (hash map + vector)
+│   ├── Token.h / .cpp      # Estructuras Token, LexerError y TokenType
+│   └── main.cpp            # Punto de entrada, modo CLI y ventana GTK/WebKit
+├── tests/                  # Suites de prueba oficiales en lenguaje LP
+│   ├── prueba_basica.lp    # Aritmética, variables y salida básica
+│   ├── prueba_completa.lp  # Cobertura integral de tipos, control y operadores
+│   ├── prueba_errores.lp   # Símbolos inválidos (@, $), 1.2.3, cadenas abiertas
+│   └── prueba_limite.lp    # Casos límite (guiones bajos, números mal formados)
+└── ui/                     # Frontend de la interfaz gráfica
+    ├── app.js              # Lógica de cliente, puente IPC y renderizado dinámico
+    ├── index.html          # Vista HTML del editor y paneles de resultados
+    └── style.css           # Estilos visuales con tema oscuro tipo IDE
 ```
 
 ---
 
-## 🔍 Reglas Léxicas y Orden de Reconocimiento
+## 📜 Especificación de Tokens y Expresiones Regulares
 
-El lexer procesa el texto fuente carácter por carácter respetando la siguiente jerarquía:
-
-| Paso | Expresión / Caracteres | Acción / Token Generado |
-| --- | --- | --- |
-| **1** | `\n`, `\t`, `\r`, `' '` | Se ignoran. `\n` incrementa `line` y reinicia `col`. |
-| **2** | `[a-zA-Z_][a-zA-Z0-9_]*` | Evalúa si es Palabra Reservada (`KW_*`); si no, genera `ID` y lo registra en la Tabla de Símbolos. |
-| **3** | `"` o `“ ”` | Lee la cadena hasta cerrarla → Token `TEXTO`. Si llega a fin de línea sin cerrar → Error léxico. |
-| **4** | Digítos `[0-9]` | Reconoce `NUM_INT` o `NUM_DEC`. Si contiene múltiples puntos o letras adyacentes → Error "Número mal formado". |
-| **5** | `/` | Si le sigue `/` es comentario de línea (se descarta); de lo contrario es `DIV` (`/`). |
-| **6** | `=`, `!`, `<`, `>` | Usa *lookahead* para distinguir asignación/operadores simples de relacionales dobles (`==`, `!=`, `<=`, `>=`). |
-| **7** | `&`, `|` | Válidos en pares (`&&`, `||`). Si aparecen individuales → Error "Símbolo no reconocido". |
-| **8** | Delimitadores y Operadores | Retorna token directo (`+`, `-`, `*`, `%`, `(`, `)`, `[`, `]`, `{`, `}`, `,`, `;`). |
-| **9** | Cualquier otro carácter | Error "Símbolo no reconocido". Continúa el análisis sin detenerse. |
-
----
-
-## 🏷️ Clasificación y Categorías de Tokens
-
-| Categoría | Clase CSS | Tipos de Token Incluidos |
-| --- | --- | --- |
-| **Identificadores** | `.id-token` | `ID` (Muestra notación `<ID, attr>`) |
-| **Números** | `.num-token` | `NUM_INT`, `NUM_DEC` |
-| **Palabras Reservadas** | `.kw-token` | `KW_INT`, `KW_FLOAT`, `KW_CHAR`, `KW_BOOLEAN`, `KW_VOID`, `KW_IF`, `KW_ELSE`, `KW_FOR`, `KW_WHILE`, `KW_SCANF`, `KW_PRINTLN`, `KW_MAIN`, `KW_RETURN` |
-| **Operadores** | `.op-token` | `ASSIGN` (`=`), `PLUS`, `MINUS`, `MULT`, `DIV`, `MOD`, `AND` (`&&`), `OR` (`||`), `NOT` (`!`), `COMP` |
-| **Delimitadores** | `.sym-token` | `LPAREN`, `RPAREN`, `LBRACKET`, `RBRACKET`, `LBRACE`, `RBRACE`, `COMMA`, `SEMICOLON` |
-| **Cadenas** | `.str-token` | `TEXTO` |
+| Expresión Regular | Token Generado | Formato de Salida | Categoría |
+| :--- | :---: | :---: | :--- |
+| `D = [0-9]` *(Auxiliar)* | — | — | Dígito numérico |
+| `L = [a-zA-Z_]` *(Auxiliar)* | — | — | Carácter de identificador |
+| `NUM_INT = D+` | `NUM_INT` | `<NUM_INT>` | Número entero |
+| `NUM_DEC = D+\.D+` | `NUM_DEC` | `<NUM_DEC>` | Número decimal |
+| `ID = L(L\|D)*` | `ID` | `<ID, pos>` | Identificador *(con posición en tabla)* |
+| `TEXTO = “.*”` o `".*"` | `TEXTO` | `<TEXTO>` | Constante de texto |
+| `int`, `float`, `char`, `boolean`, `void` | `INT`, `FLOAT`, etc. | `<TIPO>` | Palabras reservadas (Tipos) |
+| `if`, `else`, `for`, `while` | `IF`, `ELSE`, etc. | `<PALABRA>` | Palabras reservadas (Control) |
+| `scanf`, `println`, `main`, `return` | `SCANF`, `PRINTLN`, etc. | `<PALABRA>` | Palabras reservadas (E/S y función) |
+| `COMENT = //.*\n` | *(Ignorado)* | — | Comentario de una línea *(sin token)* |
+| `=` | `=` | `<=>` | Operador de asignación |
+| `+`, `-`, `*`, `/`, `%` | `+`, `-`, `*`, `/`, `%` | `<+>`, `<->`, etc. | Operadores aritméticos |
+| `&&`, `\|\|`, `!` | `&&`, `\|\|`, `!` | `<&&>`, `<\|\|>`, `<!>` | Operadores lógicos |
+| `COMP = > \| >= \| < \| <= \| != \| ==` | `COMP` | `<COMP>` | Operadores de comparación / relacionales |
+| `(`, `)`, `[`, `]`, `{`, `}`, `,`, `;` | `(`, `)`, etc. | `<(>`, `<;>`, etc. | Símbolos especiales / delimitadores |
 
 ---
 
-## 📄 Protocolo de Intercambio de Datos (JSON)
+## ⚙️ Arquitectura y Flujo de Comunicación
 
-El motor de C++ devuelve la información estructurada a través de la siguiente especificación JSON:
+```mermaid
+flowchart TD
+    subgraph UI ["Frontend (ui/)"]
+        EDITOR["Editor de Código Fuente"]
+        SELECTOR["Desplegable de Pruebas (.lp)"]
+        TABS["Pestañas: Tokens | Símbolos | Errores"]
+        JS["app.js (Bridge IPC)"]
+        
+        SELECTOR -->|Carga prueba| EDITOR
+        EDITOR -->|postMessage 'ipc'| JS
+        JS -->|Renderiza DOM| TABS
+    end
 
-```json
-{
-  "tokens": [
-    { "type": "INT", "lexeme": "int", "attr": null, "line": 1, "col": 1 },
-    { "type": "ID", "lexeme": "x", "attr": 0, "line": 1, "col": 5 },
-    { "type": "ASSIGN", "lexeme": "=", "attr": null, "line": 1, "col": 7 },
-    { "type": "NUM_DEC", "lexeme": "3.5", "attr": null, "line": 1, "col": 9 },
-    { "type": "SEMICOLON", "lexeme": ";", "attr": null, "line": 1, "col": 12 }
-  ],
-  "errors": [
-    { "line": 3, "col": 1, "lexeme": "@", "message": "Simbolo no reconocido" }
-  ],
-  "symbols": [
-    { "pos": 0, "id": "x" }
-  ]
-}
+    subgraph Backend ["Backend C++ (src/)"]
+        MAIN["main.cpp (Servidor GTK / WebKit / CLI)"]
+        LEXER["Lexer::analyze()"]
+        SYMTABLE["SymbolTable"]
+        
+        MAIN --> LEXER
+        LEXER --> SYMTABLE
+    end
 
+    subgraph Output ["Archivos de Salida (output/)"]
+        TOK["tokens.txt"]
+        SYM["tabla_simbolos.txt"]
+        ERR["errores.txt"]
+    end
+
+    JS -- "Código fuente" --> MAIN
+    MAIN -- "Resultados (JSON)" --> JS
+    MAIN --> TOK
+    MAIN --> SYM
+    MAIN --> ERR
 ```
 
 ---
 
-## 🛠 Compilación y Ejecución
+## 🛠️ Instalación y Compilación
 
-### Requisitos del Sistema
+### Prerrequisitos (Linux)
 
-* **Compilador C++17** (`g++` / `gcc` v16+ o superior)
-* **Librerías de desarrollo GTK+3 y WebKit2GTK**
+El proyecto requiere un compilador con soporte para **C++17** y las librerías de desarrollo de **GTK+ 3** y **WebKit2GTK** (versión 4.1 o 4.0):
 
-En distribuciones basadas en Ubuntu/Debian/Arch Linux:
-
+#### En Ubuntu / Debian / Linux Mint:
 ```bash
-# Ubuntu / Debian
 sudo apt update
-sudo apt install build-essential libgtk-3-dev libwebkit2gtk-4.0-dev
-
-# Arch Linux / Manjaro
-sudo pacman -S base-devel gtk3 webkit2gtk
-
+sudo apt install build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev
+# Si tu distribución utiliza la rama 4.0:
+# sudo apt install libwebkit2gtk-4.0-dev
 ```
 
-### Compilar el Proyecto
+#### En Arch Linux / Manjaro:
+```bash
+sudo pacman -S base-devel pkgconf gtk3 webkit2gtk-4.1
+```
 
-Para compilar el proyecto utilizando el `Makefile` incluido y generar el binario `lexlp`:
+#### En Fedora / RHEL:
+```bash
+sudo dnf install gcc-c++ make pkgconfig gtk3-devel webkit2gtk4.1-devel
+```
+
+### Compilación
+
+Para compilar el proyecto y generar el binario ejecutable `lexlp`:
 
 ```bash
-# Compilacion estándar
+# Compilación estándar
 make
 
-# Limpieza y re-compilacion completa
+# Limpieza y recompilación completa desde cero
 make clean && make
-
 ```
 
-### Ejecutar la Aplicación
+---
 
+## 🚀 Uso del Programa
+
+### 1. Modo Gráfico (GUI)
+Ejecuta el binario sin argumentos:
 ```bash
 ./lexlp
-
 ```
+1. En la barra superior, usa el **menú desplegable** para elegir cualquiera de las pruebas disponibles (`prueba_basica.lp`, `prueba_completa.lp`, `prueba_errores.lp`, `prueba_limite.lp` o el ejemplo estándar).
+2. Modifica o escribe código libremente en el panel izquierdo.
+3. Presiona **▶ Analizar Código**.
+4. Revisa los resultados en las pestañas derechas:
+   * **Tokens:** Etiquetas coloreadas con formato `<TIPO>` o `<ID, pos>`.
+   * **Tabla de Símbolos:** Relación `Posición` e `Identificador`.
+   * **Errores Léxicos:** Tabla con `Línea`, `Columna`, `Lexema` y estado `ERROR_LEXICO`.
 
-Al iniciar `lexlp`, la aplicación abre una ventana nativa WebView que realiza la encolación a través de `index.html` y presenta la interfaz gráfica principal (`lexer_ui.html`).
+### 2. Modo Consola (CLI)
+Ideal para pruebas automatizadas y corrección docente por lotes:
+```bash
+./lexlp tests/prueba_basica.lp
+./lexlp tests/prueba_completa.lp
+./lexlp tests/prueba_errores.lp
+./lexlp tests/prueba_limite.lp
+```
+El analizador procesará el archivo fuente, imprimirá un mensaje de confirmación y escribirá las salidas en la carpeta `output/`.
 
 ---
 
-## 🧪 Pruebas Disponibles
+## 🧪 Casos de Prueba Incluidos (`tests/`)
 
-Dentro del directorio `tests/` se encuentran los casos de prueba para evaluar los distintos escenarios del analizador:
-
-* `prueba_basica.lp`: Declaración de variables simples y operaciones matemáticas.
-* `prueba_completa.lp`: Cobertura de estructuras de control (`if/else`, `while`, `for`), arreglos y funciones I/O.
-* `prueba_errores.lp`: Detección de símbolos inválidos (`@`, `$`), operadores lógicos incompletos (`&`, `|`) y constantes numéricas mal formadas (`1.2.3`).
-* `prueba_limite.lp`: Manejo de casos borde como identificadores con guion bajo, comillas curvas tipográficas y números con punto al final.
+* **[`tests/prueba_basica.lp`](tests/prueba_basica.lp):** Declaración de variables `int` y `float`, operadores aritméticos básicos (`+`, `*`), cadenas de texto y llamada a `println`.
+* **[`tests/prueba_completa.lp`](tests/prueba_completa.lp):** Cobertura exhaustiva de palabras clave, tipos (`char`, `boolean`), arreglos unidimensionales (`datos[10]`), bucles `while`/`for`, condicionales `if`/`else`, operadores lógicos compuestos (`&&`, `||`, `!`), comparaciones relacionales (`<=`, `>=`, `!=`) y comentarios.
+* **[`tests/prueba_errores.lp`](tests/prueba_errores.lp):** Verificación de detección de símbolos no permitidos (`@variableInvalida`, `$precio`), operadores lógicos solitarios (`&`, `|`), números mal formados (`1.2.3`) y cadenas no cerradas.
+* **[`tests/prueba_limite.lp`](tests/prueba_limite.lp):** Casos límite (*edge cases*): identificadores válidos con guiones bajos iniciales (`_contador`, `__init__`), decimales sin dígitos tras el punto (`42.`), múltiples puntos (`1..2`, `1.2.3.4`), números pegados a letras (`123abc`, `1.2x`) y cadenas con comillas escapadas.
 
 ---
 
-## 📌 Limitaciones Conocidas
+## 📄 Archivos de Salida Generados (`output/`)
 
-* **Comentarios Multilínea:** Solo se procesan comentarios de una sola línea (`//`).
-* **Números que inician con punto:** Entradas como `.5` se clasifican como símbolo no reconocido (`.`) seguido del entero (`5`).
-* **Conteo de Columnas en Cadenas UTF-8:** El cálculo de columnas cuenta los desplazamientos en bytes, por lo que caracteres multibyte dentro de una cadena pueden incrementar el contador de columna en más de 1 por carácter.
+Tras cada ejecución (tanto en GUI como en CLI), se actualizan automáticamente:
 
-```
-
-```
+1. **`output/tokens.txt`:** Cadena continua de tokens delimitados por espacios:
+   ```text
+   <VOID> <MAIN> <(> <)> <{> <INT> <ID,0> <=> <NUM_INT> <;> <RETURN> <;> <}>
+   ```
+2. **`output/tabla_simbolos.txt`:** Lista tabulada de identificadores únicos registrados:
+   ```text
+   Posición	Identificador
+   0		valorA
+   1		valorB
+   ```
+3. **`output/errores.txt`:** Reporte tabulado de fallos léxicos detectados:
+   ```text
+   Línea	Columna	Lexema	Resultado
+   5	9	@variableInvalida	ERROR_LEXICO
+   9	28	1.2.3	ERROR_LEXICO
+   ```
