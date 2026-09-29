@@ -1,4 +1,7 @@
 Posición	Identificador
-0		valorA
-1		valorB
-2		total
+0		datos
+1		promedio
+2		habilitado
+3		letra
+4		indice
+5		k

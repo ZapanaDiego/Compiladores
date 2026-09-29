@@ -11,17 +11,16 @@
   <!-- Barra de herramientas superior -->
   <header class="topbar">
     <div class="brand">
-      <span class="logo-icon">⚡</span>
-      <h1>LexLP <span>Studio</span></h1>
+      <h1>Carlos <span>++</span></h1>
     </div>
     <div class="actions">
       <select id="sampleSelect" class="select-picker" onchange="loadSelectedSample()">
-        <option value="" disabled selected>📂 Seleccionar prueba (.lp)...</option>
-        <option value="basic">📄 Prueba Básica (prueba_basica.lp)</option>
-        <option value="complete">📄 Prueba Completa (prueba_completa.lp)</option>
-        <option value="errors">⚠️ Prueba de Errores (prueba_errores.lp)</option>
-        <option value="edge_cases">🔬 Casos Límite (prueba_limite.lp)</option>
-        <option value="standard">🏛️ Ejemplo Estándar LP (@errorLexico)</option>
+        <option value="" disabled selected>Seleccionar prueba (.lp)...</option>
+        <option value="basic">Prueba Básica (prueba_basica.lp)</option>
+        <option value="complete">Prueba Completa (prueba_completa.lp)</option>
+        <option value="errors">Prueba de Errores (prueba_errores.lp)</option>
+        <option value="edge_cases">Casos Límite (prueba_limite.lp)</option>
+        <option value="standard">Ejemplo Estándar LP (@errorLexico)</option>
       </select>
       <button class="btn btn-primary" onclick="executeAnalysis()">▶ Analizar Código</button>
     </div>
@@ -33,11 +32,11 @@
     <!-- MÓDULO 1: Editor de Código Fuente -->
     <section class="panel editor-panel">
       <div class="panel-header">
-        <span class="panel-title">📄 Código Fuente (.lp)</span>
+        <span class="panel-title">Código Fuente</span>
         <span id="lineColCounter" class="status-indicator">L: 1 | C: 1</span>
       </div>
       <div class="editor-wrapper">
-        <textarea id="codeEditor" spellcheck="false" placeholder="Escribe o pega tu código LP aquí..."></textarea>
+        <textarea id="codeEditor" spellcheck="false" placeholder="Recuerda que este proyecto esta echo para que Carlos sea un pro en Lenguajes de Programación, por eso tienes que escribir algo aqui! :D 😀"></textarea>
       </div>
     </section>
 
@@ -59,7 +58,7 @@
         <!-- Pestaña 1: Lista Secuencial de Tokens -->
         <div id="tab-tokens" class="tab-pane active">
           <div class="view-header">
-            <p>Secuencia continua de tokens identificados en el programa fuente[cite: 3]:</p>
+            <p>Secuencia continua de tokens identificados en el programa</p>
           </div>
           <div id="tokensContainer" class="tokens-grid">
             <div class="empty-state">Ejecuta el análisis para generar los tokens.</div>
@@ -72,8 +71,8 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Posición[cite: 3]</th>
-                  <th>Identificador (ID)[cite: 3]</th>
+                  <th>Posición</th>
+                  <th>Identificador (ID)</th>
                 </tr>
               </thead>
               <tbody id="symbolTableBody">
@@ -89,10 +88,10 @@
             <table class="data-table errors-table">
               <thead>
                 <tr>
-                  <th>Línea[cite: 3]</th>
-                  <th>Columna[cite: 3]</th>
-                  <th>Lexema[cite: 3]</th>
-                  <th>Resultado[cite: 3]</th>
+                  <th>Línea</th>
+                  <th>Columna</th>
+                  <th>Lexema</th>
+                  <th>Resultado</th>
                 </tr>
               </thead>
               <tbody id="errorsTableBody">
