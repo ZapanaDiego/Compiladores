@@ -358,4 +358,76 @@ Flujo: valida que el editor no esté vacío → envía el código a C++ → pars
 
 Dibuja cada token como una etiqueta (`token-tag`) con formato de compilador:
 
-- `<ID, 0>` para identificadores (incluyen su posición
+- `<ID, 0>` para identificadores (incluyen su posición en la tabla de símbolos).
+- `<INT>`, `<+>`, `<COMP>`... para los demás.
+
+Cada etiqueta recibe una clase CSS según su categoría:
+
+| Clase CSS | Categoría | Tipos que incluye |
+|---|---|---|
+| `id-token` | Identificadores | `ID` |
+| `num-token` | Números | `NUM_INT`, `NUM_DEC` |
+| `kw-token` | Palabras reservadas | `INT`, `FLOAT`, `CHAR`, `BOOLEAN`, `VOID`, `IF`, `ELSE`, `FOR`, `WHILE`, `SCANF`, `PRINTLN`, `MAIN`, `RETURN` |
+| `op-token` | Operadores | `=`, `+`, `-`, `*`, `/`, `%`, `&&`, `\|\|`, `!`, `COMP` |
+| `sym-token` | Delimitadores | `(`, `)`, `[`, `]`, `{`, `}`, `,`, `;` |
+| `str-token` | Cadenas | `TEXTO` |
+
+Al pasar el mouse sobre un token, el `title` muestra su lexema, línea y columna.
+
+> Los nombres de tipo (`INT`, `+`, etc.) coinciden con lo que devuelve `tokenTypeToString` en `Token.h`. Si cambias esos nombres en C++, hay que actualizar también las listas del frontend.
+
+### Módulo 2: Tabla de símbolos (`renderSymbolTable`)
+
+Tabla de dos columnas:
+
+| Columna | Campo JSON | Contenido |
+|---|---|---|
+| Posición | `pos` | Índice del identificador (el mismo `attr` de los tokens `ID`) |
+| Identificador | `id` | Nombre del identificador |
+
+Si no hay identificadores se muestra "No hay identificadores."
+
+### Módulo 3: Errores léxicos (`renderErrors`)
+
+| Columna | Campo JSON |
+|---|---|
+| Línea | `line` |
+| Columna | `col` |
+| Lexema | `lexeme` |
+| Tipo | fijo: `ERROR_LEXICO` |
+
+Si no hay errores se muestra "✓ Sin errores léxicos." Cada módulo también actualiza su contador (`tokenCount`, `symbolCount`, `errorCount`).
+
+> El campo `message` del error (por ejemplo "Numero mal formado") llega en el JSON pero la tabla actual no lo muestra.
+
+---
+
+## Flujo completo de una ejecución
+
+1. El usuario escribe código o elige una prueba del desplegable.
+2. Se llama a `executeAnalysis()`.
+3. El código viaja a C++ por `postMessage`.
+4. `Lexer::analyze` genera tokens, errores y tabla de símbolos.
+5. C++ serializa el `LexerOutput` a JSON y llama a `showResults(json)`.
+6. El frontend parsea el JSON y actualiza las tres pestañas.
+
+## Elementos HTML requeridos
+
+El script espera que existan estos IDs y clases en el HTML:
+
+| Elemento | Uso |
+|---|---|
+| `#codeEditor` | Área de texto del editor |
+| `#lineColCounter` | Indicador `L: x \| C: y` |
+| `#sampleSelect` | Desplegable de pruebas |
+| `.tab-btn` (con `data-tab`) y `.tab-pane` | Sistema de pestañas |
+| `#tokensContainer`, `#tokenCount` | Módulo de tokens |
+| `#symbolTableBody`, `#symbolCount` | Módulo de símbolos |
+| `#errorsTableBody`, `#errorCount` | Módulo de errores |
+
+## Limitaciones conocidas del frontend
+
+- **Sin escape de HTML**: lexemas como `<` o `&` se insertan con `innerHTML` en la tabla de errores, lo que puede deformar la vista. Convendría usar `textContent` o una función de escape.
+- **Un solo análisis a la vez**: `showResults` se redefine en cada llamada, por lo que lanzar dos análisis simultáneos sobrescribiría el primero.
+- **Dependencia del WebView**: `window.webkit.messageHandlers` solo existe dentro de un WebView de WebKit; en un navegador normal `analyzeCode` fallará.
+- **Contador de columna**: `keyup` y `click` no cubren todos los casos (por ejemplo, selección con teclas mantenidas o pegado con el mouse); se podría añadir el evento `input` o `selectionchange`.
