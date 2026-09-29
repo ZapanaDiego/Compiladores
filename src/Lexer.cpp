@@ -75,59 +75,59 @@ LexerOutput Lexer::analyze(const std::string& input, SymbolTable& symTable) {
             std::string ident;//guarda el lexema
             ident += c;//agrega el caracter actual al lexema
 
-            while (i < len && (std::isalnum(static_cast<unsigned char>(chars[i])) || chars[i] == '_')) {
-                ident += chars[i];
-                i++;
-                col++;  
+            while (i < len && (std::isalnum(static_cast<unsigned char>(chars[i])) || chars[i] == '_')) {//mientras el caracter actual del texto de entrada sea una letra, un numero o un guion bajo
+                ident += chars[i];//agrega el caracter actual al lexema, cual es el caracter actual del texto de entrada es una letra, un numero o un guion bajo
+                i++;//incrementa el indice
+                col++;  //
             }
 
-            auto kw = check_keyword(ident);
-            if (kw.has_value()) {
-                tokens.push_back(Token{kw.value(), ident, -1, line, start_col});
-            } else {
-                int attr = symTable.insertOrGet(ident);
-                tokens.push_back(Token{TokenType::ID, ident, attr, line, start_col});
+            auto kw = check_keyword(ident);//verifica si el lexema es una palabra reservada
+            if (kw.has_value()) {//si el lexema es una palabra reservada
+                tokens.push_back(Token{kw.value(), ident, -1, line, start_col});//guarda el token en la lista de tokens
+            } else {//si el lexema no es una palabra reservada entonces -1 pasa a la tabla de simbolos y se guarda el atributo en el token
+                int attr = symTable.insertOrGet(ident);//
+                tokens.push_back(Token{TokenType::ID, ident, attr, line, start_col});//guarda el token en la lista de tokens
             }
             continue;
         }
 
-        bool is_open_quote = (c == '"');
-        bool is_utf8_quote = (!is_open_quote && static_cast<unsigned char>(c) == 0xe2 && i + 2 < len &&
-                              static_cast<unsigned char>(chars[i+1]) == 0x80 &&
-                              (static_cast<unsigned char>(chars[i+2]) == 0x9c || static_cast<unsigned char>(chars[i+2]) == 0x9d));
+        bool is_open_quote = (c == '"');//si el caracter actual es una comilla doble
+        bool is_utf8_quote = (!is_open_quote && static_cast<unsigned char>(c) == 0xe2 && i + 2 < len &&//si el caracter actual no es una comilla doble y el caracter actual es un caracter UTF-8 de comilla doble
+                              static_cast<unsigned char>(chars[i+1]) == 0x80 &&//
+                              (static_cast<unsigned char>(chars[i+2]) == 0x9c || static_cast<unsigned char>(chars[i+2]) == 0x9d));//si el caracter actual es un caracter UTF-8 de comilla doble
 
-        if (is_open_quote || is_utf8_quote) {
-            int start_col = col;
-            int start_line = line;
-            std::string str_val = "\"";
-            if (is_open_quote) {
+        if (is_open_quote || is_utf8_quote) {//si el caracter actual es una comilla doble o un caracter UTF-8 de comilla doble
+            int start_col = col;//guarda el numero de columna donde inicia el lexema
+            int start_line = line;//guarda el numero de linea donde inicia el lexema
+            std::string str_val = "\"";//guarda el lexema
+            if (is_open_quote) {//si el caracter actual es una comilla doble
                 i++;
                 col++;
             } else {
                 i += 3;
                 col++;
             }
-            bool closed = false;
+            bool closed = false;//si el lexema esta cerrado
 
-            while (i < len) {
-                char current = chars[i];
-                if (current == '\n') break;
-                if (current == '\\') {
-                    str_val += '\\';
-                    i++; col++;
-                    if (i < len) {
-                        str_val += chars[i];
+            while (i < len) {//mientras el indice sea menor a la longitud del texto de entrada
+                char current = chars[i];//guarda el caracter actual del texto de entrada
+                if (current == '\n') break;//si el caracter actual es un salto de linea rompe el ciclo
+                if (current == '\\') {//si el caracter actual es una barra invertida
+                    str_val += '\\';//agrega la barra invertida al lexema
+                    i++; col++;//incrementa el indice y el numero de columna
+                    if (i < len) {//si el indice es menor a la longitud del texto de entrada
+                        str_val += chars[i];//agrega el caracter actual al lexema
                         i++; col++;
                     }
                     continue;
                 }
-                if (current == '"') {
-                    str_val += '"';
+                if (current == '"') {//si el caracter actual es una comilla doble
+                    str_val += '"';//agrega la comilla doble al lexema
                     i++; col++;
                     closed = true;
                     break;
                 }
-                if (static_cast<unsigned char>(current) == 0xe2 && i + 2 < len &&
+                if (static_cast<unsigned char>(current) == 0xe2 && i + 2 < len &&//si el caracter actual es un caracter UTF-8 de comilla doble
                     static_cast<unsigned char>(chars[i+1]) == 0x80 &&
                     (static_cast<unsigned char>(chars[i+2]) == 0x9c || static_cast<unsigned char>(chars[i+2]) == 0x9d)) {
                     str_val += '"';
@@ -149,9 +149,10 @@ LexerOutput Lexer::analyze(const std::string& input, SymbolTable& symTable) {
         }
 
         // Manejo robusto de números (Enteros, Decimales y Mal Formados como 1.2.3 o 1.2a)
-        if (std::isdigit(static_cast<unsigned char>(c))) {
-            int start_col = col;
-            std::string num_str;
+        if (std::isdigit(static_cast<unsigned char>(c))) {//si el caracter actual es un numero
+            int start_col = col;//guarda el numero de columna donde inicia el lexema
+            std::string num_str;//guarda el lexema
+            num_str += c;//agrega el caracter actual al lexema
             int dot_count = 0;
             bool has_invalid_chars = false;
 
