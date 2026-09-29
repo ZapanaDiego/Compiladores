@@ -55,7 +55,7 @@ body {
 
 .select-picker {
   background: var(--subpanel-bg);
-  color: var(--text-main);
+  color: var(--bg-dark);
   border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 8px 12px;
@@ -74,7 +74,7 @@ body {
 }
 .select-picker option {
   background: var(--panel-bg);
-  color: var(--text-main);
+  color: var(--);
 }
 
 .workspace {

@@ -1,7 +1,10 @@
 Posición	Identificador
-0		datos
-1		promedio
-2		habilitado
-3		letra
-4		indice
-5		k
+0		variableInvalida
+1		precio
+2		errorAnd
+3		a
+4		b
+5		errorOr
+6		c
+7		d
+8		numeroInvalido

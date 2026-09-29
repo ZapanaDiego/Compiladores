@@ -36,7 +36,8 @@ function updateCursorPos() {
 
 // Colección de pruebas disponibles correspondientes a tests/
 const testSamples = {
-  basic: `// ==========================================
+  basic: `
+// ==========================================
 // Prueba Básica: Expresiones Aritméticas y Variables
 // ==========================================
 void main() {
@@ -46,7 +47,8 @@ void main() {
     println("Calculo finalizado exitosamente");
     return;
 }`,
-  complete: `// ==========================================
+  complete: `
+// ==========================================
 // Prueba Completa: Cobertura Integral de Reglas Léxicas
 // ==========================================
 void main() {
@@ -74,7 +76,8 @@ void main() {
         return;
     }
 }`,
-  errors: `// ==========================================
+  errors: `
+// ==========================================
 // Prueba de Errores Léxicos
 // ==========================================
 void main() {
@@ -86,7 +89,8 @@ void main() {
     println("Cadena sin cerrar correctamente);
     return;
 }`,
-  edge_cases: `// ==========================================
+  edge_cases: `
+// ==========================================
 // Prueba de Casos Límite (Edge Cases)
 // ==========================================
 void main() {
