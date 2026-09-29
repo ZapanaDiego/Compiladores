@@ -1,1 +1,4 @@
 Posición	Identificador
+0		valorA
+1		valorB
+2		total

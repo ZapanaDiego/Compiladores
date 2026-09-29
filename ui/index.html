@@ -15,7 +15,14 @@
       <h1>LexLP <span>Studio</span></h1>
     </div>
     <div class="actions">
-      <button class="btn btn-secondary" onclick="loadSampleCode()">Cargar Ejemplo LP</button>
+      <select id="sampleSelect" class="select-picker" onchange="loadSelectedSample()">
+        <option value="" disabled selected>📂 Seleccionar prueba (.lp)...</option>
+        <option value="basic">📄 Prueba Básica (prueba_basica.lp)</option>
+        <option value="complete">📄 Prueba Completa (prueba_completa.lp)</option>
+        <option value="errors">⚠️ Prueba de Errores (prueba_errores.lp)</option>
+        <option value="edge_cases">🔬 Casos Límite (prueba_limite.lp)</option>
+        <option value="standard">🏛️ Ejemplo Estándar LP (@errorLexico)</option>
+      </select>
       <button class="btn btn-primary" onclick="executeAnalysis()">▶ Analizar Código</button>
     </div>
   </header>

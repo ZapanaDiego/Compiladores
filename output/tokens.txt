@@ -1,1 +1,1 @@
-
+<VOID> <MAIN> <(> <)> <{> <INT> <ID,0> <=> <NUM_INT> <;> <INT> <ID,1> <=> <NUM_INT> <;> <FLOAT> <ID,2> <=> <ID,0> <+> <ID,1> <*> <NUM_DEC> <;> <PRINTLN> <(> <TEXTO> <)> <;> <RETURN> <;> <}> 

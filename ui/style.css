@@ -53,6 +53,30 @@ body {
 .btn-secondary { background: var(--border-color); color: var(--text-main); }
 .btn-secondary:hover { background: #45475a; }
 
+.select-picker {
+  background: var(--subpanel-bg);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.select-picker:hover {
+  border-color: var(--accent);
+}
+.select-picker:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(137, 180, 250, 0.25);
+}
+.select-picker option {
+  background: var(--panel-bg);
+  color: var(--text-main);
+}
+
 .workspace {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -34,9 +34,90 @@ function updateCursorPos() {
   lineColCounter.textContent = `L: ${line} | C: ${col}`;
 }
 
-// Cargar ejemplo estándar del documento LP
-function loadSampleCode() {
-  editor.value = `void main() {
+// Colección de pruebas disponibles correspondientes a tests/
+const testSamples = {
+  basic: `// ==========================================
+// Prueba Básica: Expresiones Aritméticas y Variables
+// ==========================================
+void main() {
+    int valorA = 10;
+    int valorB = 25;
+    float total = valorA + valorB * 2.5;
+    println("Calculo finalizado exitosamente");
+    return;
+}`,
+  complete: `// ==========================================
+// Prueba Completa: Cobertura Integral de Reglas Léxicas
+// ==========================================
+void main() {
+    int datos[10];
+    float promedio = 17.75;
+    boolean habilitado = 1;
+    char letra = 65;
+
+    // Estructuras de control y operadores relacionales/lógicos
+    int indice = 0;
+    while (indice < 10) {
+        datos[indice] = indice * 2;
+        indice = indice + 1;
+    }
+
+    for (int k = 0; k <= 5; k = k + 1) {
+        if (k % 2 == 0 && !habilitado || promedio >= 15.0) {
+            println("Condicion satisfecha");
+        } else {
+            scanf(datos[k]);
+        }
+    }
+
+    if (indice != 0) {
+        return;
+    }
+}`,
+  errors: `// ==========================================
+// Prueba de Errores Léxicos
+// ==========================================
+void main() {
+    int @variableInvalida = 100;
+    float $precio = 45.99;
+    int errorAnd = a & b;
+    int errorOr = c | d;
+    float numeroInvalido = 1.2.3;
+    println("Cadena sin cerrar correctamente);
+    return;
+}`,
+  edge_cases: `// ==========================================
+// Prueba de Casos Límite (Edge Cases)
+// ==========================================
+void main() {
+    // 1. Identificadores válidos con guiones bajos iniciales y números
+    int _contador = 1;
+    int __init__ = 0;
+    int _var123 = 50;
+
+    // 2. Errores numéricos: múltiples puntos y puntos sin decimales
+    float errPunto1 = 42.;
+    float errPuntosMultiples = 1..2;
+    float errTriple = 1.2.3.4;
+
+    // 3. Números pegados a letras (Inválidos)
+    int errNumId = 123abc;
+    float errDecId = 1.2x;
+
+    // 4. Cadenas válidas con comillas escapadas
+    println("Mensaje con \\"comillas\\" internas");
+
+    // 5. Operadores contiguos y comparaciones
+    int a = 10;
+    int b = 20;
+    if (a <= b && !(_contador != 0)) {
+        a = a + + b;
+    }
+
+    // 6. Comentario de cierre
+    return;
+}`,
+  standard: `void main() {
     int edad = 20;
     float promedio = 15.5;
     if (edad >= 18) {
@@ -44,8 +125,17 @@ function loadSampleCode() {
     }
     int @errorLexico = 99;
     return;
-}`;
-  updateCursorPos();
+}`
+};
+
+// Cargar prueba seleccionada desde el desplegable
+function loadSelectedSample() {
+  const select = document.getElementById('sampleSelect');
+  const selectedKey = select.value;
+  if (testSamples[selectedKey]) {
+    editor.value = testSamples[selectedKey];
+    updateCursorPos();
+  }
 }
 
 // Ejecución del análisis y renderizado modular
