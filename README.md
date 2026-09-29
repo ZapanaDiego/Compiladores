@@ -3,7 +3,7 @@
 [![Lenguaje](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://isocpp.org/)
 [![GUI](https://img.shields.io/badge/GUI-GTK%203%20%2B%20WebKit2GTK-green.svg)](https://www.gtk.org/)
 [![Frontend](https://img.shields.io/badge/Frontend-HTML5%20%2F%20CSS3%20%2F%20JS-orange.svg)](https://developer.mozilla.org/)
-[![Licencia](https://img.shields.io/badge/License-MIT-lightgrey.svg)](LICENSE)
+
 
 **LexLP Studio** es el analizador léxico (Fase 1 del compilador) para el lenguaje de programación personalizado **LP**.
 
