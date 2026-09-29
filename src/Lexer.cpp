@@ -147,7 +147,7 @@ LexerOutput Lexer::analyze(const std::string& input, SymbolTable& symTable) {
             continue;
         }
 
-        // Manejo de números (Enteros, Decimales y Mal Formados como 1.2.3 o 1.2a)
+        // Manejo de números
         if (std::isdigit(static_cast<unsigned char>(c))) {
             int start_col = col;
             std::string num_str;
@@ -159,15 +159,18 @@ LexerOutput Lexer::analyze(const std::string& input, SymbolTable& symTable) {
 
                 if (std::isdigit(static_cast<unsigned char>(current))) {
                     num_str += current;
-                    i++; col++;
+                    i++; 
+                    col++;
                 } else if (current == '.') {
                     dot_count++;
                     num_str += current;
-                    i++; col++;
+                    i++; 
+                    col++;
                 } else if (std::isalpha(static_cast<unsigned char>(current)) || current == '_') {
                     has_invalid_chars = true;
                     num_str += current;
-                    i++; col++;
+                    i++;
+                    col++;
                 } else {
                     break;
                 }
