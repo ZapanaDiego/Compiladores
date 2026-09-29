@@ -431,3 +431,5 @@ El script espera que existan estos IDs y clases en el HTML:
 - **Un solo análisis a la vez**: `showResults` se redefine en cada llamada, por lo que lanzar dos análisis simultáneos sobrescribiría el primero.
 - **Dependencia del WebView**: `window.webkit.messageHandlers` solo existe dentro de un WebView de WebKit; en un navegador normal `analyzeCode` fallará.
 - **Contador de columna**: `keyup` y `click` no cubren todos los casos (por ejemplo, selección con teclas mantenidas o pegado con el mouse); se podría añadir el evento `input` o `selectionchange`.
+
+
