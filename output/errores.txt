@@ -1,7 +1,2 @@
 Línea	Columna	Lexema	Resultado
-6	9	@variableInvalida	ERROR_LEXICO
-7	11	$precio	ERROR_LEXICO
-8	22	&	ERROR_LEXICO
-9	21	|	ERROR_LEXICO
-10	28	1.2.3	ERROR_LEXICO
-11	13	"Cadena sin cerrar correctamente);	ERROR_LEXICO
+1	1	@dlfkjsdgj	ERROR_LEXICO

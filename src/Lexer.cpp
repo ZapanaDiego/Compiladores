@@ -147,7 +147,7 @@ LexerOutput Lexer::analyze(const std::string& input, SymbolTable& symTable) {
             continue;
         }
 
-        // Manejo robusto de números (Enteros, Decimales y Mal Formados como 1.2.3 o 1.2a)
+        // Manejo de números (Enteros, Decimales y Mal Formados como 1.2.3 o 1.2a)
         if (std::isdigit(static_cast<unsigned char>(c))) {
             int start_col = col;
             std::string num_str;
