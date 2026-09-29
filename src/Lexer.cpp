@@ -19,17 +19,17 @@ std::optional<TokenType> Lexer::check_keyword(const std::string& lexeme) {
         {"println", TokenType::KW_PRINTLN},
         {"main", TokenType::KW_MAIN},
         {"return", TokenType::KW_RETURN}
-    };
+    };//palabras reservadas 
 
     auto it = keywords.find(lexeme);
-    if (it != keywords.end()) {
+    if (it != keywords.end()) { //busca el lexema del mapa
         return it->second;
     }
-    return std::nullopt;
+    return std::nullopt;// is no lo encuntra no es palabra reservada 
 }
 
 static inline bool is_token_boundary(char ch) {
-    switch (ch) {
+    switch (ch) { //son los caracteres que inician un toker propio
         case ';': case ',':
         case '(': case ')':
         case '{': case '}':
@@ -48,36 +48,37 @@ static inline bool is_token_boundary(char ch) {
 
 LexerOutput Lexer::analyze(const std::string& input, SymbolTable& symTable) {
     std::vector<Token> tokens;
-    std::vector<LexerError> errors;
+    std::vector<LexerError> errors; //dos listas vacias  se crean durante el analiiss
 
-    const auto& chars = input;
-    int len = static_cast<int>(chars.size());
-    int i = 0;
-    int line = 1;
-    int col = 1;
+    const auto& chars = input; //referencia al texto de entrada
+    int len = static_cast<int>(chars.size()); //guarda la longitud del texto de entrada 
+    int i = 0;//indice para recorrer el texto de entrada
+    int line = 1;//guarda el numero de linea del texto de entrada
+    int col = 1;//guarda el numero de columna del texto de entrada
 
-    while (i < len) {
-        char c = chars[i];
+    while (i < len) {//mientras el indice sea menor a la longitud del texto de entrada
+        char c = chars[i];//guarda el caracter actual del texto de entrada
 
-        if (c == '\n') {
-            line++;
-            col = 1;
-            i++;
-            continue;
-        } else if (c == '\r' || c == ' ' || c == '\t') {
-            col++;
-            i++;
+        if (c == '\n') {//si el caracter actual es un salto de linea
+            line++;//incrementa el numero de linea
+            col = 1;//reinicia el numero de columna
+            i++;//incrementa el indice
+            continue;//continua con el siguiente caracter
+        } else if (c == '\r' || c == ' ' || c == '\t') {//si el caracter actual es un retorno de carro, espacio o tabulador
+            col++;//incrementa el numero de columna
+            i++;//incrementa el indice
             continue;
         }
 
-        if (std::isalpha(static_cast<unsigned char>(c)) || c == '_') {
-            int start_col = col;
-            std::string ident;
+        if (std::isalpha(static_cast<unsigned char>(c)) || c == '_') {//si el caracter actual es una letra o un guion bajo
+            int start_col = col;//guarda el numero de columna donde inicia el lexema
+            std::string ident;//guarda el lexema
+            ident += c;//agrega el caracter actual al lexema
 
             while (i < len && (std::isalnum(static_cast<unsigned char>(chars[i])) || chars[i] == '_')) {
                 ident += chars[i];
                 i++;
-                col++;
+                col++;  
             }
 
             auto kw = check_keyword(ident);
