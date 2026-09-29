@@ -1,4 +1,4 @@
-# LexLP - Analizador Léxico (Fase 1)
+# LexLP - Analizador Léxico
 
 Este proyecto es la primera fase (Analizador Léxico) para un lenguaje de programación personalizado llamado **LP**.
 
