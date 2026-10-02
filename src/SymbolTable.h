@@ -1,19 +1,20 @@
-#pragma once
+#ifndef SYMBOLTABLE_H
+#define SYMBOLTABLE_H
+
 #include <string>
-#include <unordered_map>
 #include <vector>
+#include <unordered_map>
+#include <sstream>
 
-struct SymbolEntry {
-    std::string name;
-    std::string token_type;
-    std::size_t first_line;
-    std::size_t first_col;
-    std::size_t occurrences;
+class SymbolTable {
+private:
+    std::vector<std::string> symbols_list;
+    std::unordered_map<std::string, int> symbols_map;
+
+public:
+    int insertOrGet(const std::string& lexeme);
+    void exportToFile(const std::string& filepath) const;
+    std::string to_json() const;
 };
 
-struct SymbolTable {
-    std::unordered_map<std::string, SymbolEntry> symbols;
-    
-    void insert_or_update(const std::string& name, std::size_t line, std::size_t col);
-    std::vector<SymbolEntry> to_vector() const;
-};
+#endif

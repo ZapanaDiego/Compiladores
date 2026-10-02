@@ -1,0 +1,8 @@
+Posición	Identificador
+0		errorAnd
+1		a
+2		b
+3		errorOr
+4		c
+5		d
+6		numeroInvalido

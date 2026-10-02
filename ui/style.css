@@ -53,6 +53,30 @@ body {
 .btn-secondary { background: var(--border-color); color: var(--text-main); }
 .btn-secondary:hover { background: #45475a; }
 
+.select-picker {
+  background: var(--subpanel-bg);
+  color: var(--bg-dark);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.select-picker:hover {
+  border-color: var(--accent);
+}
+.select-picker:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(137, 180, 250, 0.25);
+}
+.select-picker option {
+  background: var(--panel-bg);
+  color: var(--);
+}
+
 .workspace {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -150,6 +174,10 @@ textarea {
 }
 .token-tag.id-token { border-color: var(--accent); color: var(--accent); }
 .token-tag.num-token { border-color: var(--success); color: var(--success); }
+.token-tag.kw-token { border-color: #cba6f7; color: #cba6f7; font-weight: bold; }
+.token-tag.op-token { border-color: #fab387; color: #fab387; font-weight: bold; }
+.token-tag.sym-token { border-color: #585b70; color: #bac2de; }
+.token-tag.str-token { border-color: #a6e3a1; color: #a6e3a1; }
 
 .data-table {
   width: 100%;

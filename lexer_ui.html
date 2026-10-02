@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carlos++ - Analizador Léxico</title>
+  <link rel="stylesheet" href="lexer_ui.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Main Header & Controls -->
+    <header class="app-header">
+      <div class="brand">
+        <h1>Carlos ++</h1>
+        <span class="badge">Analizador Léxico (LP)</span>
+      </div>
+      <div class="toolbar">
+        <div class="select-wrapper">
+          <select id="sampleSelect">
+            <option value="">-- Cargar Programa de Prueba --</option>
+            <option value="standard">Demostración Estándar</option>
+            <option value="basic">Básico (Variables y Operaciones)</option>
+            <option value="complete">Cobertura Completa</option>
+            <option value="errors">Errores Léxicos</option>
+            <option value="edge_cases">Casos Límite</option>
+          </select>
+        </div>
+        <button id="analyzeBtn" class="btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          Analizar Código
+        </button>
+      </div>
+    </header>
+
+    <!-- Workspace Grid -->
+    <main class="workspace">
+      <!-- Panel Izquierdo: Editor -->
+      <section class="panel editor-panel">
+        <div class="panel-header">
+          <h2>Editor de Código (.lp)</h2>
+          <span id="lineColCounter" class="status-indicator">L: 1 | C: 1</span>
+        </div>
+        <div class="editor-wrapper">
+          <textarea id="codeEditor" spellcheck="false" placeholder="Escribe tu código fuente aquí..."></textarea>
+        </div>
+      </section>
+
+      <!-- Panel Derecho: Resultados -->
+      <section class="panel results-panel">
+        <!-- Navegación de Pestañas -->
+        <div class="tabs-nav">
+          <button class="tab-btn active" data-tab="tokens">
+            Tokens <span id="tokenCount" class="tab-badge">0</span>
+          </button>
+          <button class="tab-btn" data-tab="symbols">
+            Tabla de Símbolos <span id="symbolCount" class="tab-badge">0</span>
+          </button>
+          <button class="tab-btn" data-tab="errors">
+            Errores Léxicos <span id="errorCount" class="tab-badge alert">0</span>
+          </button>
+        </div>
+
+        <!-- Contenido de Pestañas -->
+        <div class="tabs-content">
+          <!-- Pestaña Tokens -->
+          <div id="tokens" class="tab-pane active">
+            <div id="tokensContainer" class="tokens-grid">
+              <p class="empty-msg">Ejecuta el análisis para visualizar los tokens generados.</p>
+            </div>
+          </div>
+
+          <!-- Pestaña Tabla de Símbolos -->
+          <div id="symbols" class="tab-pane">
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Posición</th>
+                    <th>Identificador</th>
+                  </tr>
+                </thead>
+                <tbody id="symbolTableBody">
+                  <tr>
+                    <td colspan="2" class="empty-msg">No hay identificadores.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Pestaña Errores -->
+          <div id="errors" class="tab-pane">
+            <div class="table-wrapper">
+              <table class="data-table errors-table">
+                <thead>
+                  <tr>
+                    <th>Línea</th>
+                    <th>Columna</th>
+                    <th>Lexema</th>
+                    <th>Mensaje</th>
+                  </tr>
+                </thead>
+                <tbody id="errorsTableBody">
+                  <tr>
+                    <td colspan="4" class="empty-msg success-msg">✓ Sin errores léxicos.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="lexer_ui.js"></script>
+</body>
+</html>
