@@ -112,12 +112,22 @@ int main(int argc, char* argv[]) {
     g_signal_connect(content_manager, "script-message-received::ipc",
                      G_CALLBACK(on_script_message), webview);
 
-    std::string html_content = read_file("ui/index.html");
+    std::string html_content = read_file("lexer_ui.html");
+    std::string base_uri = "";
     if (!html_content.empty()) {
         gchar* current_dir = g_get_current_dir();
-        std::string base_uri = "file://" + std::string(current_dir) + "/ui/";
+        base_uri = "file://" + std::string(current_dir) + "/";
         g_free(current_dir);
-        
+    } else {
+        html_content = read_file("ui/index.html");
+        if (!html_content.empty()) {
+            gchar* current_dir = g_get_current_dir();
+            base_uri = "file://" + std::string(current_dir) + "/ui/";
+            g_free(current_dir);
+        }
+    }
+
+    if (!html_content.empty()) {
         webkit_web_view_load_html(WEBKIT_WEB_VIEW(webview), html_content.c_str(), base_uri.c_str());
     }
 
