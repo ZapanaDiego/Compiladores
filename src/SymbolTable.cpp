@@ -12,14 +12,16 @@ int SymbolTable::insertOrGet(const std::string& lexeme) {
     return index;
 }
 
-void SymbolTable::exportToFile(const std::string& filepath) const {
+bool SymbolTable::exportToFile(const std::string& filepath) const {
     std::ofstream out(filepath);
-    if (out.is_open()) {
-        out << "Posición\tIdentificador\n";
-        for (size_t i = 0; i < symbols_list.size(); ++i) {
-            out << i << "\t\t" << symbols_list[i] << "\n";
-        }
+    if (!out.is_open()) {
+        return false;
     }
+    out << "Posición\tIdentificador\n";
+    for (size_t i = 0; i < symbols_list.size(); ++i) {
+        out << i << "\t\t" << symbols_list[i] << "\n";
+    }
+    return out.good();
 }
 
 std::string SymbolTable::to_json() const {

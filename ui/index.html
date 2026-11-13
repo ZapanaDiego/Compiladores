@@ -16,6 +16,8 @@
     <div class="actions">
       <select id="sampleSelect" class="select-picker" onchange="loadSelectedSample()">
         <option value="" disabled selected>Seleccionar prueba (.lp)...</option>
+        <option value="syntax_valid">Sintaxis válida (Entregable 1)</option>
+        <option value="syntax_invalid">Sintaxis inválida (falta ;)</option>
         <option value="basic">Prueba Básica (prueba_basica.lp)</option>
         <option value="complete">Prueba Completa (prueba_completa.lp)</option>
         <option value="errors">Prueba de Errores (prueba_errores.lp)</option>
@@ -51,6 +53,9 @@
         </button>
         <button class="tab-btn" data-tab="tab-errors">
           Errores Léxicos <span id="errorCount" class="badge-count error-badge">0</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-syntax">
+          Sintáctico <span id="syntaxCount" class="badge-count">0</span>
         </button>
       </nav>
 
@@ -100,10 +105,36 @@
             </table>
           </div>
         </div>
+        <!-- Pestaña 4: Resultado Sintáctico -->
+        <div id="tab-syntax" class="tab-pane">
+          <div id="syntaxResult" class="syntax-result syntax-skipped">
+            Ejecuta el análisis para conocer el resultado sintáctico.
+          </div>
+          <div class="table-scroll">
+            <table class="data-table syntax-table">
+              <thead>
+                <tr>
+                  <th>Línea</th>
+                  <th>Columna</th>
+                  <th>Encontrado</th>
+                  <th>Esperado</th>
+                  <th>Mensaje</th>
+                </tr>
+              </thead>
+              <tbody id="syntaxTableBody">
+                <tr><td colspan="5" class="empty-cell">Sin errores sintácticos.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </section>
 
   </main>
+
+  <!-- GIF de Carlos, siempre visible en la esquina inferior derecha -->
+  <img src="carlos-gif.gif" alt="Carlos" title="Carlos" class="corner-gif"
+       draggable="false" loading="eager">
 
   <script src="app.js"></script>
 </body>

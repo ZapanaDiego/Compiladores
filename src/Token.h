@@ -10,7 +10,7 @@ enum class TokenType {
     NUM_INT, NUM_DEC, ID, TEXTO,
     KW_INT, KW_FLOAT, KW_CHAR, KW_BOOLEAN, KW_VOID,
     KW_IF, KW_ELSE, KW_FOR, KW_WHILE,
-    KW_SCANF, KW_PRINTLN, KW_MAIN, KW_RETURN,
+    KW_SCANF, KW_PRINTLN, KW_MAIN, KW_RETURN, KW_FUNC,
     ASSIGN,
     PLUS, MINUS, MULT, DIV, MOD,
     AND, OR, NOT,
@@ -38,6 +38,7 @@ inline std::string tokenTypeToString(TokenType type) {
         case TokenType::KW_PRINTLN: return "PRINTLN";
         case TokenType::KW_MAIN: return "MAIN";
         case TokenType::KW_RETURN: return "RETURN";
+        case TokenType::KW_FUNC: return "FUNC";
         case TokenType::ASSIGN: return "=";
         case TokenType::PLUS: return "+";
         case TokenType::MINUS: return "-";

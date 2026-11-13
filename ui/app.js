@@ -36,6 +36,24 @@ function updateCursorPos() {
 
 // Colección de pruebas disponibles correspondientes a tests/
 const testSamples = {
+  syntax_valid: `
+// ==========================================
+// Sintaxis válida para el Entregable 1
+// ==========================================
+void main() {
+    int edad;
+    float promedio;
+    edad = 20;
+    promedio = 15.5;
+}`,
+  syntax_invalid: `
+// ==========================================
+// Sintaxis inválida: falta un punto y coma
+// ==========================================
+void main() {
+    int edad
+    edad = 20;
+}`,
   basic: `
 // ==========================================
 // Prueba Básica: Expresiones Aritméticas y Variables
@@ -148,15 +166,21 @@ async function executeAnalysis() {
   if (!code.trim()) return;
 
   try {
-    // Invocación a Rust vía Webview
+    // Invocación al backend C++ vía WebView
     const rawResponse = await window.analyzeCode(code);
     const data = JSON.parse(rawResponse);
 
     renderTokens(data.tokens || []);
     renderSymbolTable(data.symbols || []);
     renderErrors(data.errors || []);
+    renderSyntax(data.syntax || {});
   } catch (err) {
-    console.error("Error al procesar la comunicación con c++:", err);
+    console.error("Error al procesar la comunicación con C++:", err);
+    const status = document.getElementById('syntaxResult');
+    if (status) {
+      status.className = 'syntax-result syntax-rejected';
+      status.textContent = 'No se pudo obtener el resultado del analizador.';
+    }
   }
 }
 
@@ -175,7 +199,7 @@ function renderTokens(tokens) {
     const tag = document.createElement('div');
     const isID = t.type === 'ID';
     const isNum = t.type === 'NUM_INT' || t.type === 'NUM_DEC';
-    const isKw = ['INT','FLOAT','CHAR','BOOLEAN','VOID','IF','ELSE','FOR','WHILE','SCANF','PRINTLN','MAIN','RETURN'].includes(t.type);
+    const isKw = ['INT','FLOAT','CHAR','BOOLEAN','VOID','IF','ELSE','FOR','WHILE','SCANF','PRINTLN','MAIN','RETURN','FUNC'].includes(t.type);
     const isOp = ['=', '+', '-', '*', '/', '%', '&&', '||', '!', 'COMP'].includes(t.type);
     const isSym = ['(', ')', '[', ']', '{', '}', ',', ';'].includes(t.type);
     const isStr = t.type === 'TEXTO';
@@ -212,12 +236,21 @@ function renderSymbolTable(symbols) {
   }
 
   symbols.forEach(s => {
-    tbody.innerHTML += `
-      <tr>
-        <td><b>${s.pos}</b></td>
-        <td><code>${s.id}</code></td>
-      </tr>
-    `;
+    const tr = document.createElement('tr');
+
+    const tdPos = document.createElement('td');
+    const strong = document.createElement('strong');
+    strong.textContent = s.pos;
+    tdPos.appendChild(strong);
+
+    const tdId = document.createElement('td');
+    const code = document.createElement('code');
+    code.textContent = s.id;
+    tdId.appendChild(code);
+
+    tr.appendChild(tdPos);
+    tr.appendChild(tdId);
+    tbody.appendChild(tr);
   });
 }
 
@@ -233,13 +266,71 @@ function renderErrors(errors) {
   }
 
   errors.forEach(e => {
-    tbody.innerHTML += `
-      <tr>
-        <td>${e.line}</td>
-        <td>${e.col}</td>
-        <td><code>${e.lexeme}</code></td>
-        <td><b>ERROR_LEXICO</b></td>
-      </tr>
-    `;
+    const tr = document.createElement('tr');
+
+    const tdLine = document.createElement('td');
+    tdLine.textContent = e.line;
+    const tdCol = document.createElement('td');
+    tdCol.textContent = e.col;
+    const tdLexeme = document.createElement('td');
+    const code = document.createElement('code');
+    code.textContent = e.lexeme;
+    tdLexeme.appendChild(code);
+    const tdResult = document.createElement('td');
+    const strong = document.createElement('strong');
+    strong.textContent = 'ERROR_LEXICO';
+    tdResult.appendChild(strong);
+
+    tr.appendChild(tdLine);
+    tr.appendChild(tdCol);
+    tr.appendChild(tdLexeme);
+    tr.appendChild(tdResult);
+    tbody.appendChild(tr);
+  });
+}
+
+// Módulo 4: Renderizado del Resultado Sintáctico
+function renderSyntax(syntax) {
+  const status = document.getElementById('syntaxResult');
+  const tbody = document.getElementById('syntaxTableBody');
+  const counter = document.getElementById('syntaxCount');
+  if (!status || !tbody || !counter) return;
+
+  status.className = 'syntax-result';
+  tbody.innerHTML = '';
+
+  if (!syntax || syntax.executed === false) {
+    status.classList.add('syntax-skipped');
+    status.textContent = 'Análisis sintáctico no ejecutado: corrige primero los errores léxicos.';
+    counter.textContent = '—';
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">Sin análisis sintáctico.</td></tr>';
+    return;
+  }
+
+  const errors = syntax.errors || [];
+  counter.textContent = errors.length;
+
+  if (syntax.accepted) {
+    status.classList.add('syntax-accepted');
+    status.textContent = '✓ Programa aceptado sintácticamente.';
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">Sin errores sintácticos.</td></tr>';
+    return;
+  }
+
+  status.classList.add('syntax-rejected');
+  status.textContent = '✗ Programa rechazado: se encontraron errores sintácticos.';
+  if (errors.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">El parser no reportó detalles.</td></tr>';
+    return;
+  }
+
+  errors.forEach(e => {
+    const tr = document.createElement('tr');
+    [e.line, e.col, e.found, e.expected, e.message].forEach(value => {
+      const td = document.createElement('td');
+      td.textContent = value;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
   });
 }

@@ -18,7 +18,8 @@ std::optional<TokenType> Lexer::check_keyword(const std::string& lexeme) {
         {"scanf", TokenType::KW_SCANF},
         {"println", TokenType::KW_PRINTLN},
         {"main", TokenType::KW_MAIN},
-        {"return", TokenType::KW_RETURN}
+        {"return", TokenType::KW_RETURN},
+        {"func", TokenType::KW_FUNC}
     };
 
     auto it = keywords.find(lexeme);
@@ -55,6 +56,14 @@ LexerOutput Lexer::analyze(const std::string& input, SymbolTable& symTable) {
     int i = 0;
     int line = 1;
     int col = 1;
+
+    // Descarta el BOM UTF-8 si el archivo fue guardado con él.
+    if (len >= 3 &&
+        static_cast<unsigned char>(chars[0]) == 0xEF &&
+        static_cast<unsigned char>(chars[1]) == 0xBB &&
+        static_cast<unsigned char>(chars[2]) == 0xBF) {
+        i = 3;
+    }
 
     while (i < len) {
         char c = chars[i];
@@ -115,6 +124,12 @@ LexerOutput Lexer::analyze(const std::string& input, SymbolTable& symTable) {
                     str_val += '\\';
                     i++; col++;
                     if (i < len) {
+                        // Una cadena no puede continuar en la línea siguiente:
+                        // se deja el salto para que el bucle principal lo
+                        // procese y se reporte la cadena como no cerrada.
+                        if (chars[i] == '\n') {
+                            break;
+                        }
                         str_val += chars[i];
                         i++; col++;
                     }
@@ -136,7 +151,11 @@ LexerOutput Lexer::analyze(const std::string& input, SymbolTable& symTable) {
                     break;
                 }
                 str_val += current;
-                i++; col++;
+                i++;
+                // Cuenta un solo carácter visible por codepoint UTF-8, no por byte.
+                if ((static_cast<unsigned char>(current) & 0xC0) != 0x80) {
+                    col++;
+                }
             }
 
             if (closed) {

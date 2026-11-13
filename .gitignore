@@ -6,6 +6,7 @@ lexlp
 
 # Archivos objeto y librerías compiladas
 *.o
+*.d
 *.a
 *.so
 *.dylib

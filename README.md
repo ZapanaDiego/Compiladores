@@ -1,11 +1,11 @@
-# LexLP Studio — Analizador Léxico (Lenguaje LP)
+# LexLP Studio — Analizador Léxico y Sintáctico (Lenguaje LP)
 
 [![Lenguaje](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://isocpp.org/)
 [![GUI](https://img.shields.io/badge/GUI-GTK%203%20%2B%20WebKit2GTK-green.svg)](https://www.gtk.org/)
 [![Frontend](https://img.shields.io/badge/Frontend-HTML5%20%2F%20CSS3%20%2F%20JS-orange.svg)](https://developer.mozilla.org/)
 
 
-**LexLP Studio** es el analizador léxico (Fase 1 del compilador) para el lenguaje de programación personalizado **LP**.
+**LexLP Studio** es el analizador léxico y sintáctico (Fases 1 y 2 del compilador) para el lenguaje de programación personalizado **LP**.
 
 El proyecto implementa una arquitectura híbrida de alto desempeño: un **backend en C++17** que procesa el flujo léxico, gestiona la tabla de símbolos y detecta errores en una sola pasada, conectado mediante un **puente IPC nativo (GTK 3 + WebKit2GTK)** a una **interfaz gráfica moderna (UI)** desarrollada con tecnologías web. Además, cuenta con un **modo CLI** optimizado para evaluación y pruebas automatizadas por terminal.
 
@@ -46,16 +46,19 @@ El proyecto implementa una arquitectura híbrida de alto desempeño: un **backen
 │   └── tokens.txt          # Secuencia lineal continua de tokens
 ├── src/                    # Código fuente del motor en C++
 │   ├── Lexer.h / .cpp      # Escáner léxico, DFA, lookahead y reglas
+│   ├── Parser.h / .cpp     # Parser por descenso recursivo (Entregable 1)
 │   ├── SymbolTable.h / .cpp# Tabla de símbolos (hash map + vector)
 │   ├── Token.h / .cpp      # Estructuras Token, LexerError y TokenType
 │   └── main.cpp            # Punto de entrada, modo CLI y ventana GTK/WebKit
-├── tests/                  # Suites de prueba oficiales en lenguaje LP
+├── tests/                  # Suites de prueba en lenguaje LP
 │   ├── prueba_basica.lp    # Aritmética, variables y salida básica
 │   ├── prueba_completa.lp  # Cobertura integral de tipos, control y operadores
 │   ├── prueba_errores.lp   # Símbolos inválidos (@, $), 1.2.3, cadenas abiertas
-│   └── prueba_limite.lp    # Casos límite (guiones bajos, números mal formados)
+│   ├── prueba_limite.lp    # Casos límite (guiones bajos, números mal formados)
+│   └── sintactico/         # Casos válidos e inválidos del parser (Entregable 1)
 └── ui/                     # Frontend de la interfaz gráfica
     ├── app.js              # Lógica de cliente, puente IPC y renderizado dinámico
+    ├── carlos-gif.gif      # GIF decorativo siempre visible en la esquina
     ├── index.html          # Vista HTML del editor y paneles de resultados
     └── style.css           # Estilos visuales con tema oscuro tipo IDE
 ```
@@ -74,13 +77,51 @@ El proyecto implementa una arquitectura híbrida de alto desempeño: un **backen
 | `TEXTO = “.*”` o `".*"` | `TEXTO` | `<TEXTO>` | Constante de texto |
 | `int`, `float`, `char`, `boolean`, `void` | `INT`, `FLOAT`, etc. | `<TIPO>` | Palabras reservadas (Tipos) |
 | `if`, `else`, `for`, `while` | `IF`, `ELSE`, etc. | `<PALABRA>` | Palabras reservadas (Control) |
-| `scanf`, `println`, `main`, `return` | `SCANF`, `PRINTLN`, etc. | `<PALABRA>` | Palabras reservadas (E/S y función) |
+| `scanf`, `println`, `main`, `return`, `func` | `SCANF`, `PRINTLN`, etc. | `<PALABRA>` | Palabras reservadas (E/S, función y llamadas) |
 | `COMENT = //.*\n` | *(Ignorado)* | — | Comentario de una línea *(sin token)* |
 | `=` | `=` | `<=>` | Operador de asignación |
 | `+`, `-`, `*`, `/`, `%` | `+`, `-`, `*`, `/`, `%` | `<+>`, `<->`, etc. | Operadores aritméticos |
 | `&&`, `\|\|`, `!` | `&&`, `\|\|`, `!` | `<&&>`, `<\|\|>`, `<!>` | Operadores lógicos |
 | `COMP = > \| >= \| < \| <= \| != \| ==` | `COMP` | `<COMP>` | Operadores de comparación / relacionales |
 | `(`, `)`, `[`, `]`, `{`, `}`, `,`, `;` | `(`, `)`, etc. | `<(>`, `<;>`, etc. | Símbolos especiales / delimitadores |
+
+---
+
+## 🧩 Analizador Sintáctico (Entregable 1)
+
+El parser se implementa mediante **descenso recursivo** y consume directamente la
+secuencia de tokens producida por `Lexer::analyze()`. No vuelve a analizar
+caracteres del archivo fuente.
+
+### Alcance actual
+
+- `PROGRAMA → LISTA_FUNCIONES PRINCIPAL`
+- `PRINCIPAL → [void] main ( ) BLOQUE`
+- `BLOQUE → { LISTA_VARIABLES COMANDOS }`
+- Declaraciones: `TIPO`, `TIPO_BASE`, `DIMENSION`, `LISTA_VARIABLES` y `LISTA_ID`.
+- Asignaciones: `ASIGNACION`, `COMPLEMENTO` y la jerarquía de expresiones.
+- Funciones top-level básicas y llamadas con `func` como complemento de asignación.
+- Detección de errores con línea, columna, token encontrado y token esperado.
+
+Se acepta tanto `void main()` (forma usada en los ejemplos del enunciado) como
+`main()` (forma literal de la gramática). También se aceptan dimensiones
+posteriores al identificador (`int datos[10];`, usada en los ejemplos) además de
+la forma prefija de la gramática (`int[10] datos;`).
+
+### Limitaciones de esta entrega
+
+`scanf`, `println`, `if`, `else`, `while`, `return` y `for` todavía no forman
+parte del subconjunto implementado. El parser los detecta y reporta un error
+comprensible; se completarán en el Entregable 2. `for` no pertenece a la
+gramática de LP.
+
+### Resultado del parser
+
+El análisis sintáctico se considera exitoso solo si el lexer no reportó errores
+y no se encontró ningún error sintáctico. Los resultados se guardan en:
+
+- `output/errores_sintacticos.txt`
+- `output/resultado_sintactico.txt`
 
 ---
 
@@ -91,7 +132,7 @@ flowchart TD
     subgraph UI ["Frontend (ui/)"]
         EDITOR["Editor de Código Fuente"]
         SELECTOR["Desplegable de Pruebas (.lp)"]
-        TABS["Pestañas: Tokens | Símbolos | Errores"]
+        TABS["Pestañas: Tokens | Símbolos | Errores | Sintáctico"]
         JS["app.js (Bridge IPC)"]
         
         SELECTOR -->|Carga prueba| EDITOR
@@ -103,9 +144,11 @@ flowchart TD
         MAIN["main.cpp (Servidor GTK / WebKit / CLI)"]
         LEXER["Lexer::analyze()"]
         SYMTABLE["SymbolTable"]
-        
+        PARSER["Parser::parse()"]
+
         MAIN --> LEXER
         LEXER --> SYMTABLE
+        LEXER --> PARSER
     end
 
     subgraph Output ["Archivos de Salida (output/)"]
@@ -115,7 +158,8 @@ flowchart TD
     end
 
     JS -- "Código fuente" --> MAIN
-    MAIN -- "Resultados (JSON)" --> JS
+    MAIN -- "Resultados (JSON + syntax)" --> JS
+    PARSER -- "Errores sintácticos" --> MAIN
     MAIN --> TOK
     MAIN --> SYM
     MAIN --> ERR
@@ -157,6 +201,9 @@ make
 
 # Limpieza y recompilación completa desde cero
 make clean && make
+
+# Pruebas del subconjunto sintáctico del Entregable 1
+make test
 ```
 
 ---
@@ -168,13 +215,15 @@ Ejecuta el binario sin argumentos:
 ```bash
 ./lexlp
 ```
-1. En la barra superior, usa el **menú desplegable** para elegir cualquiera de las pruebas disponibles (`prueba_basica.lp`, `prueba_completa.lp`, `prueba_errores.lp`, `prueba_limite.lp` o el ejemplo estándar).
+1. En la barra superior, usa el **menú desplegable** para elegir una prueba. Las opciones “Sintaxis válida” y “Sintaxis inválida” están pensadas para demostrar el parser; las demás son pruebas del lexer.
 2. Modifica o escribe código libremente en el panel izquierdo.
 3. Presiona **▶ Analizar Código**.
 4. Revisa los resultados en las pestañas derechas:
    * **Tokens:** Etiquetas coloreadas con formato `<TIPO>` o `<ID, pos>`.
    * **Tabla de Símbolos:** Relación `Posición` e `Identificador`.
    * **Errores Léxicos:** Tabla con `Línea`, `Columna`, `Lexema` y estado `ERROR_LEXICO`.
+   * **Sintáctico:** Resultado `ACEPTADO`/`RECHAZADO`, errores del parser y estado “no ejecutado” cuando el lexer falla.
+5. En la esquina inferior derecha se muestra `ui/carlos-gif.gif` en bucle infinito, siempre por encima de los paneles y sin bloquear la interacción.
 
 ### 2. Modo Consola (CLI)
 Ideal para pruebas automatizadas y corrección docente por lotes:
@@ -183,8 +232,24 @@ Ideal para pruebas automatizadas y corrección docente por lotes:
 ./lexlp tests/prueba_completa.lp
 ./lexlp tests/prueba_errores.lp
 ./lexlp tests/prueba_limite.lp
+
+# Pruebas del parser (Entregable 1)
+./lexlp tests/sintactico/valido_minimo.lp
+./lexlp tests/sintactico/invalido_sin_punto_coma.lp
 ```
-El analizador procesará el archivo fuente, imprimirá un mensaje de confirmación y escribirá las salidas en la carpeta `output/`.
+El analizador procesará el archivo fuente, ejecutará el lexer y el parser, e imprimirá el resultado sintáctico (`ACEPTADO` o `RECHAZADO`) junto con los errores encontrados. Las salidas se escriben en la carpeta `output/`.
+
+Códigos de salida del modo CLI:
+
+| Código | Significado |
+|:---:|---|
+| `0` | Programa aceptado sintácticamente |
+| `1` | Errores léxicos o sintácticos, o error de lectura/escritura |
+| `2` | Uso incorrecto del comando |
+
+Los archivos del lexer se siguen generando aunque el parser rechace el programa, para conservar la evidencia de la fase léxica.
+
+> Las pruebas históricas del lexer usan construcciones que todavía no forman parte del subconjunto sintáctico (`println`, `return;`, `for`), por lo que el parser puede rechazarlas. Para la aceptación sintáctica deben usarse los casos de `tests/sintactico/`.
 
 ---
 
@@ -194,6 +259,20 @@ El analizador procesará el archivo fuente, imprimirá un mensaje de confirmaci�
 * **[`tests/prueba_completa.lp`](tests/prueba_completa.lp):** Cobertura exhaustiva de palabras clave, tipos (`char`, `boolean`), arreglos unidimensionales (`datos[10]`), bucles `while`/`for`, condicionales `if`/`else`, operadores lógicos compuestos (`&&`, `||`, `!`), comparaciones relacionales (`<=`, `>=`, `!=`) y comentarios.
 * **[`tests/prueba_errores.lp`](tests/prueba_errores.lp):** Verificación de detección de símbolos no permitidos (`@variableInvalida`, `$precio`), operadores lógicos solitarios (`&`, `|`), números mal formados (`1.2.3`) y cadenas no cerradas.
 * **[`tests/prueba_limite.lp`](tests/prueba_limite.lp):** Casos límite (*edge cases*): identificadores válidos con guiones bajos iniciales (`_contador`, `__init__`), decimales sin dígitos tras el punto (`42.`), múltiples puntos (`1..2`, `1.2.3.4`), números pegados a letras (`123abc`, `1.2x`) y cadenas con comillas escapadas.
+
+### Pruebas del analizador sintáctico
+
+La carpeta [`tests/sintactico/`](tests/sintactico/) contiene los casos del Entregable 1:
+
+* `valido_minimo.lp`: ejemplo mínimo del enunciado con `void main()`.
+* `valido_estricto.lp`: `main()` sin `void` y declaraciones con arreglos.
+* `valido_expresiones.lp`: asignaciones con expresiones y paréntesis.
+* `valido_funciones.lp`: función top-level y llamada con `func`.
+* `invalido_sin_punto_coma.lp`: falta de `;` en una declaración.
+* `invalido_llave_sin_cerrar.lp`: bloque sin `}`.
+* `invalido_token_inesperado.lp`: token que no inicia un comando.
+* `invalido_declaracion_despues_comando.lp`: declaración después de un comando.
+* `invalido_parentesis_sin_cerrar.lp`: expresión sin `)`.
 
 ---
 
@@ -217,3 +296,11 @@ Tras cada ejecución (tanto en GUI como en CLI), se actualizan automáticamente:
    5	9	@variableInvalida	ERROR_LEXICO
    9	28	1.2.3	ERROR_LEXICO
    ```
+4. **`output/errores_sintacticos.txt`:** Errores del parser con línea, columna,
+   token encontrado, token esperado y mensaje:
+   ```text
+   Línea	Columna	Encontrado	Esperado	Mensaje
+   5	9	edad	;	Se esperaba ';'; se encontró 'edad'.
+   ```
+5. **`output/resultado_sintactico.txt`:** Resultado global (`ACEPTADO`,
+   `RECHAZADO` o `NO EJECUTADO`).

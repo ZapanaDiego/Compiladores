@@ -13,7 +13,7 @@ private:
 
 public:
     int insertOrGet(const std::string& lexeme);
-    void exportToFile(const std::string& filepath) const;
+    bool exportToFile(const std::string& filepath) const;
     std::string to_json() const;
 };
 
