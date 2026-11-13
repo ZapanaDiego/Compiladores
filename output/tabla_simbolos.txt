@@ -1,2 +1,7 @@
 Posición	Identificador
-0		edad
+0		datos
+1		promedio
+2		habilitado
+3		letra
+4		indice
+5		k

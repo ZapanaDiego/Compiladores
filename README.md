@@ -216,7 +216,7 @@ Ejecuta el binario sin argumentos:
 ./lexlp
 ```
 1. En la barra superior, usa el **menú desplegable** para elegir una prueba. Las opciones “Sintaxis válida” y “Sintaxis inválida” están pensadas para demostrar el parser; las demás son pruebas del lexer.
-2. Modifica o escribe código libremente en el panel izquierdo.
+2. Modifica o escribe código libremente en el panel izquierdo. El editor muestra la numeración de líneas a la izquierda y la posición actual del cursor en el encabezado (`L: línea | C: columna`).
 3. Presiona **▶ Analizar Código**.
 4. Revisa los resultados en las pestañas derechas:
    * **Tokens:** Etiquetas coloreadas con formato `<TIPO>` o `<ID, pos>`.

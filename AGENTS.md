@@ -1,6 +1,6 @@
 # AGENTS.md — LexLP Studio
 
-**Última actualización:** 2026-11-12 21:02:13 -05
+**Última actualización:** 2026-11-12 21:39:15 -05
 **Modelo:** DeepSeek V4.1 Flash 1017 (`opencode-go` / `deepseek-v4.1-flash`)
 **Estado:** Activo
 
@@ -300,6 +300,7 @@ son rechazados con mensajes de línea/columna.
 | 2026-11-12 | 20:49:15 | -05 | DeepSeek V4.1 Flash 1017 (`opencode-go` / `deepseek-v4.1-flash`) | Se copió el GIF a `ui/carlos-gif.gif` y se incrustó en la esquina inferior derecha de la interfaz con posición fija, borde, sombra y bucle infinito. Se validaron HTML/JS y `make test`. | `ui/index.html`, `ui/style.css`, `ui/carlos-gif.gif`, `README.md`, `AGENTS.md` |
 | 2026-11-12 | 20:58:05 | -05 | DeepSeek V4.1 Flash 1017 (`opencode-go` / `deepseek-v4.1-flash`) | Rediseño completo de la paleta de la UI: fondo azul profundo, superficies elevadas, texto de alto contraste, acentos turquesa, colores específicos para tokens, estados, tablas, botones, selector, scrollbars y GIF. Se validaron HTML/JS y se generaron capturas con Firefox headless. | `ui/style.css`, `AGENTS.md` |
 | 2026-11-12 | 21:02:13 | -05 | DeepSeek V4.1 Flash 1017 (`opencode-go` / `deepseek-v4.1-flash`) | Creación de `actualizacion.md` con la documentación técnica completa del Entregable 1: alcance, arquitectura, cambios en lexer/parser, integración, pruebas, compilación, limitaciones y pendientes. | `actualizacion.md`, `AGENTS.md` |
+| 2026-11-12 | 21:39:15 | -05 | DeepSeek V4.1 Flash 1017 (`opencode-go` / `deepseek-v4.1-flash`) | Se agregó numeración de líneas al editor: gutter sincronizado con el scroll, actualización al escribir/pegar/cargar muestras, sin ajuste de línea y alineación con la fuente del editor. Se validaron HTML/JS y se generaron capturas con Firefox headless. | `ui/index.html`, `ui/app.js`, `ui/style.css`, `README.md`, `AGENTS.md` |
 
 **Plantilla para nuevas entradas:**
 

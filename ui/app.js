@@ -21,10 +21,28 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
 // Contador de línea y columna en el editor
 const editor = document.getElementById('codeEditor');
+const lineNumbers = document.getElementById('lineNumbers');
 const lineColCounter = document.getElementById('lineColCounter');
 
+editor.addEventListener('input', handleEditorInput);
 editor.addEventListener('keyup', updateCursorPos);
 editor.addEventListener('click', updateCursorPos);
+editor.addEventListener('scroll', syncLineNumbersScroll);
+
+function updateLineNumbers() {
+  const totalLines = editor.value.split('\n').length;
+  let numbers = '';
+  for (let i = 1; i <= totalLines; i++) {
+    numbers += String(i);
+    if (i < totalLines) numbers += '\n';
+  }
+  lineNumbers.textContent = numbers;
+  syncLineNumbersScroll();
+}
+
+function syncLineNumbersScroll() {
+  lineNumbers.scrollTop = editor.scrollTop;
+}
 
 function updateCursorPos() {
   const text = editor.value.substring(0, editor.selectionStart);
@@ -33,6 +51,14 @@ function updateCursorPos() {
   const col = lines[lines.length - 1].length + 1;
   lineColCounter.textContent = `L: ${line} | C: ${col}`;
 }
+
+function handleEditorInput() {
+  updateLineNumbers();
+  updateCursorPos();
+}
+
+updateLineNumbers();
+updateCursorPos();
 
 // Colección de pruebas disponibles correspondientes a tests/
 const testSamples = {
@@ -156,7 +182,11 @@ function loadSelectedSample() {
   const selectedKey = select.value;
   if (testSamples[selectedKey]) {
     editor.value = testSamples[selectedKey];
-    updateCursorPos();
+    editor.scrollTop = 0;
+    editor.scrollLeft = 0;
+    editor.selectionStart = 0;
+    editor.selectionEnd = 0;
+    handleEditorInput();
   }
 }
 

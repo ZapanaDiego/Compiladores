@@ -221,13 +221,34 @@ body {
 /* Editor */
 .editor-wrapper {
   flex: 1;
-  padding: 8px;
+  display: flex;
+  min-height: 0;
   background: var(--subpanel-bg);
+  overflow: hidden;
+}
+
+.line-numbers {
+  flex: 0 0 auto;
+  min-width: 3.25rem;
+  padding: 12px 10px 12px 14px;
+  text-align: right;
+  color: var(--text-muted);
+  background: #091322;
+  border-right: 1px solid var(--border-color);
+  font-family: var(--font-code);
+  font-size: 14px;
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+  overflow: hidden;
+  white-space: pre;
 }
 
 textarea {
-  width: 100%;
-  height: 100%;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 12px 14px;
   background: transparent;
   color: #dbe9ff;
   caret-color: var(--accent);
@@ -238,6 +259,8 @@ textarea {
   line-height: 1.6;
   resize: none;
   tab-size: 4;
+  white-space: pre;
+  overflow: auto;
 }
 
 textarea::placeholder {
