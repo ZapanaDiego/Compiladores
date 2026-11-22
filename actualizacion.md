@@ -6,6 +6,8 @@
 
 > **Alcance de esta entrega:** integración con el analizador léxico e implementación inicial del analizador sintáctico, incluyendo estructura básica del programa, declaraciones y asignaciones.
 
+> **Nota:** este documento describe el Entregable 1. La implementación completa, el AST y las pruebas del Entregable 2 se documentan en `informe_entregable2.md` y en el `README.md`.
+
 ---
 
 ## 1. Resumen ejecutivo

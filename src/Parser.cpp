@@ -37,7 +37,7 @@ std::string ParseResult::to_json() const {
     oss << "{\"executed\":" << (executed ? "true" : "false")
         << ",\"accepted\":" << (accepted ? "true" : "false")
         << ",\"errors\":[";
-    for (size_t i = 0; i < errors.size(); ++i) {
+    for (std::size_t i = 0; i < errors.size(); ++i) {
         if (i > 0) oss << ",";
         oss << errors[i].to_json();
     }
@@ -136,49 +136,146 @@ void Parser::report(const Token& token, const std::string& expected,
         error.message = "Se esperaba " + expected + "; se encontró '" +
                         error.found + "'.";
     }
-    errors_.push_back(error);
+
+    // Evita duplicar exactamente el mismo error en la misma posición.
+    for (const auto& existing : errors_) {
+        if (existing.line == error.line && existing.col == error.col &&
+            existing.message == error.message) {
+            return;
+        }
+    }
+
+    if (errors_.size() < 100) {
+        errors_.push_back(error);
+    }
 }
 
+// Recuperación general: avanza hasta un punto seguro sin consumir el '}'
+// que cierra el bloque actual.
 void Parser::synchronize() {
+    int braces = 0;
+    int parens = 0;
+
     while (!isAtEnd()) {
-        if (previous().type == TokenType::SEMICOLON) {
+        if (previous().type == TokenType::SEMICOLON && braces == 0 &&
+            parens == 0) {
             return;
         }
 
         switch (peek().type) {
-            case TokenType::RBRACE:
-            case TokenType::ID:
-            case TokenType::KW_INT:
-            case TokenType::KW_FLOAT:
-            case TokenType::KW_CHAR:
-            case TokenType::KW_BOOLEAN:
-            case TokenType::KW_IF:
-            case TokenType::KW_WHILE:
-            case TokenType::KW_FOR:
-            case TokenType::KW_RETURN:
-            case TokenType::KW_SCANF:
-            case TokenType::KW_PRINTLN:
-            case TokenType::KW_FUNC:
-                return;
-            default:
+            case TokenType::LBRACE:
+                ++braces;
                 advance();
+                continue;
+            case TokenType::RBRACE:
+                if (braces == 0) {
+                    return;
+                }
+                --braces;
+                advance();
+                continue;
+            case TokenType::LPAREN:
+                ++parens;
+                advance();
+                continue;
+            case TokenType::RPAREN:
+                if (parens > 0) {
+                    --parens;
+                }
+                advance();
+                continue;
+            default:
                 break;
         }
+
+        if (braces == 0 && parens == 0) {
+            switch (peek().type) {
+                case TokenType::ID:
+                case TokenType::KW_INT:
+                case TokenType::KW_FLOAT:
+                case TokenType::KW_CHAR:
+                case TokenType::KW_BOOLEAN:
+                case TokenType::KW_IF:
+                case TokenType::KW_WHILE:
+                case TokenType::KW_RETURN:
+                case TokenType::KW_SCANF:
+                case TokenType::KW_PRINTLN:
+                case TokenType::KW_FUNC:
+                    return;
+                default:
+                    break;
+            }
+        }
+
+        advance();
     }
+}
+
+void Parser::recoverCommand() {
+    int braces = 0;
+    int parens = 0;
+
+    while (!isAtEnd()) {
+        TokenType type = peek().type;
+        if (type == TokenType::LBRACE) {
+            ++braces;
+        } else if (type == TokenType::RBRACE) {
+            if (braces == 0) {
+                return;
+            }
+            --braces;
+        } else if (type == TokenType::LPAREN) {
+            ++parens;
+        } else if (type == TokenType::RPAREN) {
+            if (parens > 0) {
+                --parens;
+            }
+        } else if (type == TokenType::SEMICOLON && braces == 0 &&
+                   parens == 0) {
+            advance();
+            return;
+        }
+        advance();
+    }
+}
+
+void Parser::recoverTopLevel() {
+    while (!isAtEnd()) {
+        if (isPrincipalStart() || isTypeStart() || check(TokenType::KW_VOID)) {
+            return;
+        }
+        if (check(TokenType::LBRACE)) {
+            skipBalancedBlock();
+            continue;
+        }
+        advance();
+    }
+}
+
+void Parser::skipBalancedBlock() {
+    if (!check(TokenType::LBRACE)) {
+        return;
+    }
+
+    int depth = 0;
+    do {
+        if (check(TokenType::LBRACE)) {
+            ++depth;
+        } else if (check(TokenType::RBRACE)) {
+            --depth;
+        }
+        advance();
+    } while (depth > 0 && !isAtEnd());
 }
 
 void Parser::skipUnsupportedCommand(const std::string& name) {
     report(peek(), "comando implementado en esta entrega",
            "La construcción '" + name +
                "' se implementará en la entrega completa.");
-    size_t before = pos_;
     if (!isAtEnd()) {
         advance();
     }
     synchronize();
-    if (pos_ == before && !isAtEnd()) {
-        advance();
-    }
 }
 
 bool Parser::isTypeStart() const {
@@ -202,16 +299,21 @@ bool Parser::isPrincipalStart() const {
 }
 
 ParseResult Parser::parseProgram() {
-    parseListaFunciones();
+    std::vector<ASTNodePtr> functions = parseListaFunciones();
+    ASTNodePtr mainNode;
+    bool mainFound = false;
 
     if (isPrincipalStart()) {
-        parsePrincipal();
+        mainNode = parsePrincipal();
+        mainFound = true;
     } else {
         report(peek(), "main()");
     }
 
     if (!isAtEnd()) {
-        report(peek(), "fin de archivo");
+        if (mainFound) {
+            report(peek(), "fin de archivo");
+        }
         while (!isAtEnd()) {
             advance();
         }
@@ -221,341 +323,779 @@ ParseResult Parser::parseProgram() {
     result.executed = true;
     result.accepted = errors_.empty();
     result.errors = errors_;
+
+    if (result.accepted) {
+        Token start = tokens_.empty() ? eof_ : tokens_.front();
+        auto program = makeNode(ASTKind::Program, start);
+        for (const auto& fn : functions) {
+            addChild(program, "function", fn);
+        }
+        if (mainNode) {
+            addChild(program, "main", mainNode);
+        }
+        result.ast = program;
+    }
+
     return result;
 }
 
 // LISTA_FUNCIONES -> DECLARACION_FUNCION LISTA_FUNCIONES | ε
-void Parser::parseListaFunciones() {
+std::vector<ASTNodePtr> Parser::parseListaFunciones() {
+    std::vector<ASTNodePtr> functions;
+
     while (!isAtEnd() && !isPrincipalStart()) {
-        if (check(TokenType::KW_VOID) || isTypeStart()) {
-            parseDeclaracionFuncion();
-        } else {
+        if (!isTypeStart() && !check(TokenType::KW_VOID)) {
             break;
         }
+
+        // int main(), float main(), etc. no pertenecen a la gramática.
+        if (peekNext().type == TokenType::KW_MAIN) {
+            report(peekNext(), "main() sin tipo de retorno",
+                   "main no lleva tipo de retorno; usa void main() o main().");
+            advance(); // consume el tipo
+            break;
+        }
+
+        std::size_t before = pos_;
+        ASTNodePtr function = parseDeclaracionFuncion();
+        if (function) {
+            functions.push_back(function);
+        }
+        if (pos_ == before) {
+            advance();
+        }
     }
+
+    return functions;
 }
 
 // DECLARACION_FUNCION -> TIPO_RETORNO id ( PARAMETROS ) BLOQUE
-void Parser::parseDeclaracionFuncion() {
-    parseTipoRetorno();
+ASTNodePtr Parser::parseDeclaracionFuncion() {
+    ASTNodePtr returnType = parseTipoRetorno();
 
-    if (!expect(TokenType::ID, "identificador de función")) {
-        synchronize();
-        return;
+    Token nameToken;
+    if (check(TokenType::ID)) {
+        nameToken = advance();
+    } else {
+        expect(TokenType::ID, "identificador de función");
+        recoverTopLevel();
+        return nullptr;
     }
+
     if (!expect(TokenType::LPAREN, "'('")) {
-        synchronize();
-        return;
+        recoverTopLevel();
+        return nullptr;
     }
 
-    parseParametros();
+    std::vector<ASTNodePtr> params = parseParametros();
     expect(TokenType::RPAREN, "')'");
-    parseBloque();
+    ASTNodePtr body = parseBloque();
+
+    auto function = makeNode(ASTKind::Function, nameToken, nameToken.lexeme);
+    addChild(function, "returnType", returnType);
+    for (const auto& param : params) {
+        addChild(function, "param", param);
+    }
+    addChild(function, "body", body);
+    return function;
 }
 
 // TIPO_RETORNO -> TIPO | void
-void Parser::parseTipoRetorno() {
+ASTNodePtr Parser::parseTipoRetorno() {
     if (match(TokenType::KW_VOID)) {
-        return;
+        Token token = previous();
+        return makeNode(ASTKind::Type, token, "void");
     }
-    parseTipo();
+    return parseTipo();
 }
 
 // TIPO -> TIPO_BASE DIMENSION
-void Parser::parseTipo() {
-    parseTipoBase();
-    parseDimension();
+ASTNodePtr Parser::parseTipo() {
+    Token start = peek();
+    std::string base = parseTipoBase();
+    auto type = makeNode(ASTKind::Type, start, base);
+    parseDimension(type);
+    return type;
 }
 
 // TIPO_BASE -> char | float | int | boolean
-void Parser::parseTipoBase() {
+std::string Parser::parseTipoBase() {
     switch (peek().type) {
         case TokenType::KW_CHAR:
+            advance();
+            return "char";
         case TokenType::KW_FLOAT:
+            advance();
+            return "float";
         case TokenType::KW_INT:
+            advance();
+            return "int";
         case TokenType::KW_BOOLEAN:
             advance();
-            return;
+            return "boolean";
         default:
             report(peek(), "tipo base (char, float, int o boolean)");
-            return;
+            return "desconocido";
     }
 }
 
 // DIMENSION -> [ num_int ] DIMENSION | ε
-void Parser::parseDimension() {
+void Parser::parseDimension(const ASTNodePtr& target, const std::string& role) {
     while (match(TokenType::LBRACKET)) {
-        expect(TokenType::NUM_INT, "num_int");
+        if (check(TokenType::NUM_INT)) {
+            Token number = advance();
+            addChild(target, role,
+                     makeNode(ASTKind::Dimension, number, number.lexeme,
+                              "num_int"));
+        } else {
+            report(peek(), "num_int");
+        }
         expect(TokenType::RBRACKET, "']'");
     }
 }
 
 // PARAMETROS -> TIPO id LISTA_PARAMETROS | ε
-void Parser::parseParametros() {
+std::vector<ASTNodePtr> Parser::parseParametros() {
+    std::vector<ASTNodePtr> params;
+
     if (check(TokenType::KW_VOID)) {
-        // La gramática no contempla "void" como tipo de parámetro.
-        return;
+        // La gramática no contempla void como tipo de parámetro.
+        return params;
     }
+
     if (isTypeStart()) {
-        parseTipo();
-        expect(TokenType::ID, "identificador de parámetro");
-        // Compatibilidad con la forma habitual "int datos[10]" además de
-        // la forma de la gramática "int[10] datos".
-        parseDimension();
-        parseListaParametros();
+        ASTNodePtr type = parseTipo();
+
+        Token nameToken;
+        if (check(TokenType::ID)) {
+            nameToken = advance();
+        } else {
+            expect(TokenType::ID, "identificador de parámetro");
+            return params;
+        }
+
+        auto param = makeNode(ASTKind::Param, nameToken, nameToken.lexeme);
+        addChild(param, "type", type);
+        // Compatibilidad con parámetros estilo "int datos[10]".
+        parseDimension(param);
+        params.push_back(param);
+        parseListaParametros(params);
     }
+
+    return params;
 }
 
 // LISTA_PARAMETROS -> , TIPO id LISTA_PARAMETROS | ε
-void Parser::parseListaParametros() {
+void Parser::parseListaParametros(std::vector<ASTNodePtr>& params) {
     while (match(TokenType::COMMA)) {
-        parseTipo();
-        expect(TokenType::ID, "identificador de parámetro");
-        parseDimension();
+        if (!isTypeStart()) {
+            report(peek(), "tipo de parámetro");
+            return;
+        }
+
+        ASTNodePtr type = parseTipo();
+
+        if (!check(TokenType::ID)) {
+            expect(TokenType::ID, "identificador de parámetro");
+            return;
+        }
+        Token nameToken = advance();
+
+        auto param = makeNode(ASTKind::Param, nameToken, nameToken.lexeme);
+        addChild(param, "type", type);
+        parseDimension(param);
+        params.push_back(param);
     }
 }
 
 // PRINCIPAL -> [void] main ( ) BLOQUE
-// El "void" opcional es una extensión de compatibilidad con los ejemplos
-// del documento, que usan "void main()".
-void Parser::parsePrincipal() {
+ASTNodePtr Parser::parsePrincipal() {
+    Token start = peek();
     match(TokenType::KW_VOID);
     expect(TokenType::KW_MAIN, "main");
+    Token nameToken = previous();
     expect(TokenType::LPAREN, "'('");
     expect(TokenType::RPAREN, "')'");
-    parseBloque();
+    ASTNodePtr body = parseBloque();
+
+    auto mainNode = makeNode(ASTKind::Main, nameToken, "main");
+    addChild(mainNode, "body", body);
+    (void)start;
+    return mainNode;
 }
 
 // BLOQUE -> { LISTA_VARIABLES COMANDOS }
-void Parser::parseBloque() {
+ASTNodePtr Parser::parseBloque() {
+    Token start = peek();
     if (!expect(TokenType::LBRACE, "'{'")) {
-        return;
+        recoverTopLevel();
+        return nullptr;
     }
 
-    parseListaVariables();
-    parseComandos();
+    auto block = makeNode(ASTKind::Block, start);
+    std::vector<ASTNodePtr> variables = parseListaVariables();
+    for (const auto& variable : variables) {
+        addChild(block, "declaration", variable);
+    }
+
+    std::vector<ASTNodePtr> commands = parseComandos();
+    for (const auto& command : commands) {
+        addChild(block, "command", command);
+    }
+
     expect(TokenType::RBRACE, "'}'");
+    return block;
 }
 
 // LISTA_VARIABLES -> TIPO id LISTA_ID ; LISTA_VARIABLES | ε
-void Parser::parseListaVariables() {
-    while (isTypeStart()) {
-        parseTipo();
+std::vector<ASTNodePtr> Parser::parseListaVariables() {
+    std::vector<ASTNodePtr> variables;
 
-        if (!expect(TokenType::ID, "identificador")) {
-            synchronize();
+    while (isTypeStart()) {
+        std::size_t before = pos_;
+        Token start = peek();
+        ASTNodePtr type = parseTipo();
+
+        if (!check(TokenType::ID)) {
+            expect(TokenType::ID, "identificador");
+            recoverCommand();
+            if (pos_ == before) {
+                advance();
+            }
             continue;
         }
 
-        // Compatibilidad con "int datos[10]" (forma usada en los ejemplos)
-        // además de "int[10] datos" (forma literal de la gramática).
-        parseDimension();
-        parseListaId();
-        expect(TokenType::SEMICOLON, "';'");
+        Token firstToken = advance();
+        auto firstDeclarator =
+            makeNode(ASTKind::Declarator, firstToken, firstToken.lexeme);
+        // Compatibilidad con "int datos[10]".
+        parseDimension(firstDeclarator);
+
+        auto varDecl = makeNode(ASTKind::VarDecl, start,
+                                type ? type->value : "");
+        addChild(varDecl, "type", type);
+        addChild(varDecl, "declarator", firstDeclarator);
+        parseListaId(varDecl);
+        variables.push_back(varDecl);
+
+        if (!expect(TokenType::SEMICOLON, "';'")) {
+            recoverCommand();
+        }
     }
+
+    return variables;
 }
 
 // LISTA_ID -> , id LISTA_ID | ε
-void Parser::parseListaId() {
+void Parser::parseListaId(const ASTNodePtr& varDecl) {
     while (match(TokenType::COMMA)) {
-        if (!expect(TokenType::ID, "identificador")) {
+        if (!check(TokenType::ID)) {
+            expect(TokenType::ID, "identificador");
             return;
         }
+        Token token = advance();
+        addChild(varDecl, "declarator",
+                 makeNode(ASTKind::Declarator, token, token.lexeme));
     }
 }
 
 // COMANDOS -> COMANDO COMANDOS | ε
-void Parser::parseComandos() {
+std::vector<ASTNodePtr> Parser::parseComandos() {
+    std::vector<ASTNodePtr> commands;
+
     while (!isAtEnd() && !check(TokenType::RBRACE)) {
-        parseComando();
+        std::size_t before = pos_;
+        ASTNodePtr command = parseComando();
+        if (command) {
+            commands.push_back(command);
+        }
+        if (pos_ == before) {
+            advance();
+        }
     }
+
+    return commands;
 }
 
 // COMANDO -> LECTURA | ESCRITURA | ASIGNACION | FUNCION |
 //            SELECCION | MIENTRAS | RETORNO
-void Parser::parseComando() {
+ASTNodePtr Parser::parseComando() {
     if (check(TokenType::ID)) {
-        parseAsignacion();
-        return;
+        return parseAsignacion();
     }
 
     switch (peek().type) {
-        case TokenType::KW_FUNC:
-            skipUnsupportedCommand("llamada a función con 'func'");
-            return;
-        case TokenType::KW_RETURN:
-            skipUnsupportedCommand("return");
-            return;
-        case TokenType::KW_IF:
-            skipUnsupportedCommand("if");
-            return;
-        case TokenType::KW_WHILE:
-            skipUnsupportedCommand("while");
-            return;
         case TokenType::KW_SCANF:
-            skipUnsupportedCommand("scanf");
-            return;
+            return parseLectura();
         case TokenType::KW_PRINTLN:
-            skipUnsupportedCommand("println");
-            return;
+            return parseEscritura();
+        case TokenType::KW_IF:
+            return parseSeleccion();
+        case TokenType::KW_WHILE:
+            return parseMientras();
+        case TokenType::KW_RETURN:
+            return parseRetorno();
+        case TokenType::KW_FUNC:
+            return parseFuncionComoComando();
         case TokenType::KW_FOR:
             report(peek(), "comando válido",
                    "'for' no forma parte de la gramática de LP.");
             advance();
-            synchronize();
-            return;
+            if (check(TokenType::LBRACE)) {
+                skipBalancedBlock();
+            } else {
+                synchronize();
+            }
+            return nullptr;
+        case TokenType::KW_ELSE:
+            report(peek(), "if",
+                   "Se encontró 'else' sin un 'if' que lo preceda.");
+            advance();
+            recoverCommand();
+            return nullptr;
         default:
             report(peek(), "comando válido");
-            advance();
-            synchronize();
-            return;
+            recoverCommand();
+            return nullptr;
     }
 }
 
-// ASIGNACION -> id = COMPLEMENTO ;
-void Parser::parseAsignacion() {
-    if (!expect(TokenType::ID, "identificador")) {
-        synchronize();
-        return;
-    }
-    if (!expect(TokenType::ASSIGN, "'='")) {
-        synchronize();
-        return;
+// ASIGNACION -> id [ DIMENSION2 ] = COMPLEMENTO ;
+ASTNodePtr Parser::parseAsignacion() {
+    if (!check(TokenType::ID)) {
+        expect(TokenType::ID, "identificador");
+        recoverCommand();
+        return nullptr;
     }
 
-    parseComplemento();
+    Token idToken = advance();
+    ASTNodePtr target =
+        makeNode(ASTKind::Identifier, idToken, idToken.lexeme);
+    // Compatibilidad con arreglos en el lado izquierdo: datos[i] = ...
+    target = parseDimension2(target);
+
+    if (!expect(TokenType::ASSIGN, "'='")) {
+        recoverCommand();
+        return target;
+    }
+
+    ASTNodePtr value = parseComplemento();
     expect(TokenType::SEMICOLON, "';'");
+
+    auto assign = makeNode(ASTKind::Assign, idToken);
+    addChild(assign, "target", target);
+    addChild(assign, "value", value);
+    return assign;
 }
 
 // COMPLEMENTO -> EXPRESION | FUNCION
-void Parser::parseComplemento() {
+ASTNodePtr Parser::parseComplemento() {
     if (check(TokenType::KW_FUNC)) {
-        parseFuncion();
-    } else {
-        parseExpresion();
+        return parseFuncion();
     }
+    return parseExpresion();
 }
 
 // FUNCION -> func id ( ARGUMENTOS )
-void Parser::parseFuncion() {
+ASTNodePtr Parser::parseFuncion() {
     expect(TokenType::KW_FUNC, "func");
-    expect(TokenType::ID, "identificador de función");
-    expect(TokenType::LPAREN, "'('");
-    parseArgumentos();
+
+    Token nameToken;
+    if (check(TokenType::ID)) {
+        nameToken = advance();
+    } else {
+        expect(TokenType::ID, "identificador de función");
+        recoverCommand();
+        return nullptr;
+    }
+
+    if (!expect(TokenType::LPAREN, "'('")) {
+        recoverCommand();
+        return nullptr;
+    }
+
+    std::vector<ASTNodePtr> args = parseArgumentos();
     expect(TokenType::RPAREN, "')'");
+
+    auto call = makeNode(ASTKind::Call, nameToken, nameToken.lexeme);
+    for (const auto& arg : args) {
+        addChild(call, "argument", arg);
+    }
+    return call;
+}
+
+// FUNCION como comando. La gramática no exige ';', pero se acepta de forma
+// opcional para compatibilidad con la notación habitual.
+ASTNodePtr Parser::parseFuncionComoComando() {
+    ASTNodePtr call = parseFuncion();
+    match(TokenType::SEMICOLON);
+    return call;
 }
 
 // ARGUMENTOS -> EXPRESION NUEVO_ARGUMENTO | ε
-void Parser::parseArgumentos() {
+std::vector<ASTNodePtr> Parser::parseArgumentos() {
+    std::vector<ASTNodePtr> args;
+
     if (check(TokenType::RPAREN) || isAtEnd()) {
-        return;
+        return args;
     }
 
-    parseExpresion();
-    while (match(TokenType::COMMA)) {
-        parseExpresion();
+    ASTNodePtr first = parseExpresion();
+    if (first) {
+        args.push_back(first);
     }
+
+    while (match(TokenType::COMMA)) {
+        ASTNodePtr arg = parseExpresion();
+        if (arg) {
+            args.push_back(arg);
+        } else {
+            break;
+        }
+    }
+
+    return args;
+}
+
+// LECTURA -> scanf ( TERMINO_LECTURA NUEVO_TERMINO_LECTURA ) ;
+ASTNodePtr Parser::parseLectura() {
+    Token start = peek();
+    expect(TokenType::KW_SCANF, "scanf");
+    if (!expect(TokenType::LPAREN, "'('")) {
+        recoverCommand();
+        return nullptr;
+    }
+
+    auto read = makeNode(ASTKind::Read, start, "scanf");
+    if (check(TokenType::RPAREN)) {
+        report(peek(), "término de lectura",
+               "scanf requiere al menos un identificador.");
+    } else {
+        ASTNodePtr term = parseTerminoLectura();
+        addChild(read, "term", term);
+        while (match(TokenType::COMMA)) {
+            ASTNodePtr next = parseTerminoLectura();
+            if (!next) {
+                break;
+            }
+            addChild(read, "term", next);
+        }
+    }
+
+    if (!check(TokenType::RPAREN)) {
+        report(peek(), "')'");
+        recoverCommand();
+        return read;
+    }
+    advance();
+    if (!expect(TokenType::SEMICOLON, "';'")) {
+        recoverCommand();
+    }
+    return read;
+}
+
+// TERMINO_LECTURA -> id DIMENSION2
+ASTNodePtr Parser::parseTerminoLectura() {
+    if (!check(TokenType::ID)) {
+        expect(TokenType::ID, "identificador de lectura");
+        return nullptr;
+    }
+
+    Token token = advance();
+    ASTNodePtr identifier =
+        makeNode(ASTKind::Identifier, token, token.lexeme);
+    return parseDimension2(identifier);
+}
+
+// ESCRITURA -> println ( TERMINO_ESCRITURA NUEVO_TERMINO_ESCRITURA ) ;
+ASTNodePtr Parser::parseEscritura() {
+    Token start = peek();
+    expect(TokenType::KW_PRINTLN, "println");
+    if (!expect(TokenType::LPAREN, "'('")) {
+        recoverCommand();
+        return nullptr;
+    }
+
+    auto write = makeNode(ASTKind::Write, start, "println");
+    if (check(TokenType::RPAREN)) {
+        report(peek(), "término de escritura",
+               "println requiere al menos un término.");
+    } else {
+        ASTNodePtr term = parseTerminoEscritura();
+        addChild(write, "term", term);
+        while (match(TokenType::COMMA)) {
+            ASTNodePtr next = parseTerminoEscritura();
+            if (!next) {
+                break;
+            }
+            addChild(write, "term", next);
+        }
+    }
+
+    if (!check(TokenType::RPAREN)) {
+        report(peek(), "')'");
+        recoverCommand();
+        return write;
+    }
+    advance();
+    if (!expect(TokenType::SEMICOLON, "';'")) {
+        recoverCommand();
+    }
+    return write;
+}
+
+// TERMINO_ESCRITURA -> id DIMENSION2 | CONSTANTE | texto
+ASTNodePtr Parser::parseTerminoEscritura() {
+    if (check(TokenType::ID)) {
+        Token token = advance();
+        ASTNodePtr identifier =
+            makeNode(ASTKind::Identifier, token, token.lexeme);
+        return parseDimension2(identifier);
+    }
+
+    if (check(TokenType::NUM_INT) || check(TokenType::NUM_DEC)) {
+        Token token = advance();
+        return makeNode(ASTKind::Literal, token, token.lexeme,
+                        token.type == TokenType::NUM_INT ? "num_int"
+                                                          : "num_dec");
+    }
+
+    if (check(TokenType::TEXTO)) {
+        Token token = advance();
+        return makeNode(ASTKind::Literal, token, token.lexeme, "texto");
+    }
+
+    report(peek(), "término de escritura (identificador, constante o texto)");
+    return nullptr;
+}
+
+// SELECCION -> if ( EXPRESION ) BLOQUE SINO
+ASTNodePtr Parser::parseSeleccion() {
+    Token start = peek();
+    expect(TokenType::KW_IF, "if");
+    if (!expect(TokenType::LPAREN, "'('")) {
+        recoverCommand();
+        return nullptr;
+    }
+
+    ASTNodePtr condition = parseExpresion();
+    expect(TokenType::RPAREN, "')'");
+    ASTNodePtr thenBlock = parseBloque();
+
+    auto selection = makeNode(ASTKind::If, start);
+    addChild(selection, "condition", condition);
+    addChild(selection, "then", thenBlock);
+
+    if (match(TokenType::KW_ELSE)) {
+        ASTNodePtr elseBlock = parseBloque();
+        addChild(selection, "else", elseBlock);
+    }
+
+    return selection;
+}
+
+// MIENTRAS -> while ( EXPRESION ) BLOQUE
+ASTNodePtr Parser::parseMientras() {
+    Token start = peek();
+    expect(TokenType::KW_WHILE, "while");
+    if (!expect(TokenType::LPAREN, "'('")) {
+        recoverCommand();
+        return nullptr;
+    }
+
+    ASTNodePtr condition = parseExpresion();
+    expect(TokenType::RPAREN, "')'");
+    ASTNodePtr body = parseBloque();
+
+    auto loop = makeNode(ASTKind::While, start);
+    addChild(loop, "condition", condition);
+    addChild(loop, "body", body);
+    return loop;
+}
+
+// RETORNO -> return EXPRESION ;
+ASTNodePtr Parser::parseRetorno() {
+    Token start = peek();
+    expect(TokenType::KW_RETURN, "return");
+    ASTNodePtr value = parseExpresion();
+    expect(TokenType::SEMICOLON, "';'");
+
+    auto ret = makeNode(ASTKind::Return, start);
+    addChild(ret, "value", value);
+    return ret;
 }
 
 // EXPRESION -> EXPRESION_O
-void Parser::parseExpresion() {
-    parseExpresionO();
+ASTNodePtr Parser::parseExpresion() {
+    return parseExpresionO();
 }
 
-// EXPRESION_O -> EXPRESION_Y EXPRESION_O2
-// EXPRESION_O2 -> || EXPRESION_Y EXPRESION_O2 | ε
-void Parser::parseExpresionO() {
-    parseExpresionY();
-    while (match(TokenType::OR)) {
-        parseExpresionY();
+// EXPRESION_O -> EXPRESION_Y ( || EXPRESION_Y )*
+ASTNodePtr Parser::parseExpresionO() {
+    ASTNodePtr left = parseExpresionY();
+    if (!left) {
+        return nullptr;
     }
-}
 
-// EXPRESION_Y -> EXPRESION_RELACIONAL EXPRESION_Y2
-// EXPRESION_Y2 -> && EXPRESION_RELACIONAL EXPRESION_Y2 | ε
-void Parser::parseExpresionY() {
-    parseExpresionRelacional();
-    while (match(TokenType::AND)) {
-        parseExpresionRelacional();
+    while (check(TokenType::OR)) {
+        Token op = advance();
+        ASTNodePtr right = parseExpresionY();
+        auto binary = makeNode(ASTKind::Binary, op, op.lexeme);
+        addChild(binary, "left", left);
+        addChild(binary, "right", right);
+        left = binary;
     }
+
+    return left;
 }
 
-// EXPRESION_RELACIONAL -> EXPRESION_ADITIVA EXPRESION_RELACIONAL2
-// EXPRESION_RELACIONAL2 -> comp EXPRESION_ADITIVA | ε
-void Parser::parseExpresionRelacional() {
-    parseExpresionAditiva();
-    if (match(TokenType::COMP)) {
-        parseExpresionAditiva();
+// EXPRESION_Y -> EXPRESION_RELACIONAL ( && EXPRESION_RELACIONAL )*
+ASTNodePtr Parser::parseExpresionY() {
+    ASTNodePtr left = parseExpresionRelacional();
+    if (!left) {
+        return nullptr;
     }
+
+    while (check(TokenType::AND)) {
+        Token op = advance();
+        ASTNodePtr right = parseExpresionRelacional();
+        auto binary = makeNode(ASTKind::Binary, op, op.lexeme);
+        addChild(binary, "left", left);
+        addChild(binary, "right", right);
+        left = binary;
+    }
+
+    return left;
 }
 
-// EXPRESION_ADITIVA -> EXPRESION_MULTIPLICATIVA EXPRESION_ADITIVA2
-// EXPRESION_ADITIVA2 -> OPERADOR_ADITIVO EXPRESION_MULTIPLICATIVA ... | ε
-void Parser::parseExpresionAditiva() {
-    parseExpresionMultiplicativa();
+// EXPRESION_RELACIONAL -> EXPRESION_ADITIVA [ comp EXPRESION_ADITIVA ]
+ASTNodePtr Parser::parseExpresionRelacional() {
+    ASTNodePtr left = parseExpresionAditiva();
+    if (!left) {
+        return nullptr;
+    }
+
+    if (check(TokenType::COMP)) {
+        Token op = advance();
+        ASTNodePtr right = parseExpresionAditiva();
+        auto binary = makeNode(ASTKind::Binary, op, op.lexeme);
+        addChild(binary, "left", left);
+        addChild(binary, "right", right);
+        left = binary;
+    }
+
+    return left;
+}
+
+// EXPRESION_ADITIVA -> EXPRESION_MULTIPLICATIVA ( (+|-) ... )*
+ASTNodePtr Parser::parseExpresionAditiva() {
+    ASTNodePtr left = parseExpresionMultiplicativa();
+    if (!left) {
+        return nullptr;
+    }
+
     while (check(TokenType::PLUS) || check(TokenType::MINUS)) {
-        advance();
-        parseExpresionMultiplicativa();
+        Token op = advance();
+        ASTNodePtr right = parseExpresionMultiplicativa();
+        auto binary = makeNode(ASTKind::Binary, op, op.lexeme);
+        addChild(binary, "left", left);
+        addChild(binary, "right", right);
+        left = binary;
     }
+
+    return left;
 }
 
-// EXPRESION_MULTIPLICATIVA -> FACTOR EXPRESION_MULTIPLICATIVA2
-// EXPRESION_MULTIPLICATIVA2 -> OPERADOR_MULTIPLICATIVO FACTOR ... | ε
-void Parser::parseExpresionMultiplicativa() {
-    parseFactor();
+// EXPRESION_MULTIPLICATIVA -> FACTOR ( (*|/|%) FACTOR )*
+ASTNodePtr Parser::parseExpresionMultiplicativa() {
+    ASTNodePtr left = parseFactor();
+    if (!left) {
+        return nullptr;
+    }
+
     while (check(TokenType::MULT) || check(TokenType::DIV) ||
            check(TokenType::MOD)) {
-        advance();
-        parseFactor();
+        Token op = advance();
+        ASTNodePtr right = parseFactor();
+        auto binary = makeNode(ASTKind::Binary, op, op.lexeme);
+        addChild(binary, "left", left);
+        addChild(binary, "right", right);
+        left = binary;
     }
+
+    return left;
 }
 
 // FACTOR -> SIGNO TERMINO | texto | ! FACTOR | ( EXPRESION )
-void Parser::parseFactor() {
-    if (match(TokenType::PLUS) || match(TokenType::MINUS)) {
-        parseTermino();
-        return;
+ASTNodePtr Parser::parseFactor() {
+    if (check(TokenType::PLUS) || check(TokenType::MINUS)) {
+        Token op = advance();
+        ASTNodePtr operand = parseTermino();
+        auto unary = makeNode(ASTKind::Unary, op, op.lexeme);
+        addChild(unary, "operand", operand);
+        return unary;
     }
+
     if (match(TokenType::TEXTO)) {
-        return;
+        Token token = previous();
+        return makeNode(ASTKind::Literal, token, token.lexeme, "texto");
     }
+
     if (match(TokenType::NOT)) {
-        parseFactor();
-        return;
+        Token op = previous();
+        ASTNodePtr operand = parseFactor();
+        auto unary = makeNode(ASTKind::Unary, op, op.lexeme);
+        addChild(unary, "operand", operand);
+        return unary;
     }
+
     if (match(TokenType::LPAREN)) {
-        parseExpresion();
+        ASTNodePtr expression = parseExpresion();
         expect(TokenType::RPAREN, "')'");
-        return;
+        return expression;
     }
+
     if (check(TokenType::ID) || check(TokenType::NUM_INT) ||
         check(TokenType::NUM_DEC)) {
-        parseTermino();
-        return;
+        return parseTermino();
     }
 
     report(peek(), "expresión (identificador, constante, texto, signo, '!' o '(')");
+    return nullptr;
 }
 
 // TERMINO -> id DIMENSION2 | CONSTANTE
-void Parser::parseTermino() {
+ASTNodePtr Parser::parseTermino() {
     if (check(TokenType::ID)) {
-        advance();
-        parseDimension2();
-        return;
+        Token token = advance();
+        ASTNodePtr identifier =
+            makeNode(ASTKind::Identifier, token, token.lexeme);
+        return parseDimension2(identifier);
     }
+
     if (check(TokenType::NUM_INT) || check(TokenType::NUM_DEC)) {
-        advance();
-        return;
+        Token token = advance();
+        return makeNode(ASTKind::Literal, token, token.lexeme,
+                        token.type == TokenType::NUM_INT ? "num_int"
+                                                          : "num_dec");
     }
 
     report(peek(), "identificador o constante");
+    return nullptr;
 }
 
 // DIMENSION2 -> [ EXPRESION_ADITIVA ] DIMENSION2 | ε
-void Parser::parseDimension2() {
+ASTNodePtr Parser::parseDimension2(ASTNodePtr base) {
     while (match(TokenType::LBRACKET)) {
-        parseExpresionAditiva();
+        Token open = previous();
+        ASTNodePtr index = parseExpresionAditiva();
         expect(TokenType::RBRACKET, "']'");
+
+        auto access = makeNode(ASTKind::Index, open);
+        addChild(access, "base", base);
+        addChild(access, "index", index);
+        base = access;
     }
+
+    return base;
 }

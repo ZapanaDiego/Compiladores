@@ -28,8 +28,9 @@ El proyecto implementa una arquitectura híbrida de alto desempeño: un **backen
 * **Doble Modo de Ejecución:**
   * **Modo GUI (Escritorio):** IDE interactivo con selector desplegable de pruebas, visor de tokens por categorías, tabla de símbolos y lista de errores en vivo.
   * **Modo CLI (Terminal):** Ejecución directa (`./lexlp archivo.lp`) diseñada para calificación automatizada.
+* **AST navegable:** representación textual y JSON del árbol sintáctico, visible en la GUI.
 * **Exportación Automática a Disco (`output/`):**
-  * Genera tras cada análisis los archivos exigidos para la entrega: `tokens.txt`, `tabla_simbolos.txt` y `errores.txt`.
+  * Genera tras cada análisis los archivos exigidos para la entrega: `tokens.txt`, `tabla_simbolos.txt`, `errores.txt`, `errores_sintacticos.txt`, `resultado_sintactico.txt`, `ast.txt` y `ast.json`.
 
 ---
 
@@ -39,23 +40,33 @@ El proyecto implementa una arquitectura híbrida de alto desempeño: un **backen
 .
 ├── Makefile                # Script de compilación (g++ C++17, GTK 3, WebKit2GTK)
 ├── README.md               # Documentación general del proyecto
+├── actualizacion.md        # Documentación histórica del Entregable 1
+├── informe_entregable2.md  # Informe técnico del Entregable 2 (AST y parser completo)
 ├── lexlp                   # Binario ejecutable compilado
-├── output/                 # Reportes generados en texto plano
-│   ├── errores.txt         # Reporte tabulado de errores léxicos
+├── output/                 # Reportes generados por la ejecución
+│   ├── tokens.txt          # Secuencia lineal continua de tokens
 │   ├── tabla_simbolos.txt  # Tabla de símbolos con identificadores únicos
-│   └── tokens.txt          # Secuencia lineal continua de tokens
+│   ├── errores.txt         # Reporte tabulado de errores léxicos
+│   ├── errores_sintacticos.txt  # Errores del parser
+│   ├── resultado_sintactico.txt # ACEPTADO / RECHAZADO / NO EJECUTADO
+│   ├── ast.txt             # Árbol de sintaxis abstracta en texto
+│   └── ast.json            # AST estructurado para la GUI
 ├── src/                    # Código fuente del motor en C++
 │   ├── Lexer.h / .cpp      # Escáner léxico, DFA, lookahead y reglas
-│   ├── Parser.h / .cpp     # Parser por descenso recursivo (Entregable 1)
+│   ├── Parser.h / .cpp     # Parser por descenso recursivo
+│   ├── AST.h / .cpp        # Nodos, serialización JSON y árbol textual
 │   ├── SymbolTable.h / .cpp# Tabla de símbolos (hash map + vector)
 │   ├── Token.h / .cpp      # Estructuras Token, LexerError y TokenType
 │   └── main.cpp            # Punto de entrada, modo CLI y ventana GTK/WebKit
 ├── tests/                  # Suites de prueba en lenguaje LP
-│   ├── prueba_basica.lp    # Aritmética, variables y salida básica
-│   ├── prueba_completa.lp  # Cobertura integral de tipos, control y operadores
+│   ├── prueba_basica.lp    # Aritmética, variables y salida básica (léxica)
+│   ├── prueba_completa.lp  # Cobertura léxica de tipos, control y operadores
 │   ├── prueba_errores.lp   # Símbolos inválidos (@, $), 1.2.3, cadenas abiertas
 │   ├── prueba_limite.lp    # Casos límite (guiones bajos, números mal formados)
-│   └── sintactico/         # Casos válidos e inválidos del parser (Entregable 1)
+│   ├── sintactico/         # Casos válidos e inválidos del Entregable 1
+│   └── e2/                 # Casos válidos e inválidos del Entregable 2
+│       ├── validos/        # Programas que deben aceptarse
+│       └── invalidos/      # Programas que deben rechazarse
 └── ui/                     # Frontend de la interfaz gráfica
     ├── app.js              # Lógica de cliente, puente IPC y renderizado dinámico
     ├── carlos-gif.gif      # GIF decorativo siempre visible en la esquina
@@ -87,11 +98,12 @@ El proyecto implementa una arquitectura híbrida de alto desempeño: un **backen
 
 ---
 
-## 🧩 Analizador Sintáctico (Entregable 1)
+## 🧩 Analizador Sintáctico y AST (Entregables 1 y 2)
 
-El parser se implementa mediante **descenso recursivo** y consume directamente la
-secuencia de tokens producida por `Lexer::analyze()`. No vuelve a analizar
-caracteres del archivo fuente.
+El parser se implementa mediante **descenso recursivo predictivo** y consume
+directamente la secuencia de tokens producida por `Lexer::analyze()`. No vuelve a
+analizar caracteres del archivo fuente. Cada método del parser corresponde a un
+no terminal de la gramática.
 
 ### Alcance actual
 
@@ -99,21 +111,32 @@ caracteres del archivo fuente.
 - `PRINCIPAL → [void] main ( ) BLOQUE`
 - `BLOQUE → { LISTA_VARIABLES COMANDOS }`
 - Declaraciones: `TIPO`, `TIPO_BASE`, `DIMENSION`, `LISTA_VARIABLES` y `LISTA_ID`.
-- Asignaciones: `ASIGNACION`, `COMPLEMENTO` y la jerarquía de expresiones.
-- Funciones top-level básicas y llamadas con `func` como complemento de asignación.
-- Detección de errores con línea, columna, token encontrado y token esperado.
+- Asignaciones: `ASIGNACION`, `COMPLEMENTO` y la jerarquía completa de expresiones.
+- Funciones: declaraciones, tipos de retorno, parámetros y llamadas `func` como
+  complemento de asignación o como comando.
+- Entrada/salida: `scanf` y `println` con sus listas de términos.
+- Control: `if/else` y `while` con condiciones y bloques.
+- Retorno: `return EXPRESION ;` (la gramática no admite `return;`).
+- Errores con línea, columna, token encontrado y token esperado.
+- Recuperación de errores para continuar el análisis cuando es viable.
+- Construcción de un **AST** con nodos y roles, exportado a texto y JSON.
 
 Se acepta tanto `void main()` (forma usada en los ejemplos del enunciado) como
 `main()` (forma literal de la gramática). También se aceptan dimensiones
 posteriores al identificador (`int datos[10];`, usada en los ejemplos) además de
-la forma prefija de la gramática (`int[10] datos;`).
+la forma prefija de la gramática (`int[10] datos;`). `for` no pertenece a la
+gramática de LP y se reporta explícitamente.
 
-### Limitaciones de esta entrega
+### AST
 
-`scanf`, `println`, `if`, `else`, `while`, `return` y `for` todavía no forman
-parte del subconjunto implementado. El parser los detecta y reporta un error
-comprensible; se completarán en el Entregable 2. `for` no pertenece a la
-gramática de LP.
+El AST se construye durante el análisis sintáctico y se guarda en:
+
+- `output/ast.txt`: representación textual con roles (`condition`, `then`,
+  `else`, `body`, `term`, etc.).
+- `output/ast.json`: representación estructurada para la interfaz gráfica.
+
+La pestaña **AST** de la GUI muestra el árbol de forma navegable. El AST solo se
+genera cuando el programa es aceptado sintácticamente.
 
 ### Resultado del parser
 
@@ -122,6 +145,44 @@ y no se encontró ningún error sintáctico. Los resultados se guardan en:
 
 - `output/errores_sintacticos.txt`
 - `output/resultado_sintactico.txt`
+- `output/ast.txt`
+- `output/ast.json`
+
+### Cobertura de la gramática y compatibilidad
+
+La implementación cubre **todas las producciones** de la gramática de LP:
+estructura del programa, funciones, parámetros, declaraciones, bloques,
+asignaciones, expresiones, `scanf`, `println`, `if/else`, `while` y `return`.
+
+Para mantener compatibilidad con los ejemplos del enunciado se aceptan estas
+extensiones, que deben interpretarse como un **superconjunto** de la gramática:
+
+| Extensión | Ejemplo | Motivo |
+|---|---|---|
+| `void` opcional en `main` | `void main()` | Todos los ejemplos lo usan. |
+| Dimensión postfija | `int datos[10];` | Forma usada en los ejemplos. |
+| Dimensión postfija en parámetros | `int suma(int datos[10])` | Compatibilidad con arreglos. |
+| Asignación a posición de arreglo | `datos[i] = i + 1;` | Ejemplos con arreglos. |
+| `;` opcional tras `func` como comando | `func saluda();` | Notación habitual de llamadas. |
+
+Decisiones estrictas:
+
+- `return;` se rechaza: `RETORNO` exige una expresión.
+- `int main()` se rechaza con un mensaje específico.
+- `for` no pertenece a LP y se rechaza explícitamente.
+- `else if` se rechaza: `SINO → else BLOQUE`, no `else if`.
+- `scanf()` y `println()` vacíos se rechazan.
+- `scanf` solo acepta identificadores con índices; `println` acepta
+  identificadores, constantes o texto.
+- Las declaraciones locales deben ir antes de los comandos del bloque.
+- La comparación es no asociativa: solo se admite un `COMP` por expresión
+  relacional.
+
+La gramática usa recursión por la derecha en las expresiones. El parser
+reconoce las mismas cadenas, pero construye el AST con **asociatividad por la
+izquierda** para los operadores binarios (`a - b - c` se agrupa como
+`(a - b) - c`). La precedencia sí coincide con las producciones. Esta decisión
+está documentada en `informe_entregable2.md`.
 
 ---
 
@@ -132,7 +193,7 @@ flowchart TD
     subgraph UI ["Frontend (ui/)"]
         EDITOR["Editor de Código Fuente"]
         SELECTOR["Desplegable de Pruebas (.lp)"]
-        TABS["Pestañas: Tokens | Símbolos | Errores | Sintáctico"]
+        TABS["Pestañas: Tokens | Símbolos | Errores | Sintáctico | AST"]
         JS["app.js (Bridge IPC)"]
         
         SELECTOR -->|Carga prueba| EDITOR
@@ -145,24 +206,35 @@ flowchart TD
         LEXER["Lexer::analyze()"]
         SYMTABLE["SymbolTable"]
         PARSER["Parser::parse()"]
+        AST["AST (nodos + serialización)"]
 
         MAIN --> LEXER
         LEXER --> SYMTABLE
         LEXER --> PARSER
+        PARSER --> AST
     end
 
     subgraph Output ["Archivos de Salida (output/)"]
         TOK["tokens.txt"]
         SYM["tabla_simbolos.txt"]
         ERR["errores.txt"]
+        ESYN["errores_sintacticos.txt"]
+        RES["resultado_sintactico.txt"]
+        ASTTXT["ast.txt"]
+        ASTJSON["ast.json"]
     end
 
     JS -- "Código fuente" --> MAIN
-    MAIN -- "Resultados (JSON + syntax)" --> JS
+    MAIN -- "Resultados (JSON + syntax + ast)" --> JS
     PARSER -- "Errores sintácticos" --> MAIN
+    AST -- "Árbol aceptado" --> MAIN
     MAIN --> TOK
     MAIN --> SYM
     MAIN --> ERR
+    MAIN --> ESYN
+    MAIN --> RES
+    MAIN --> ASTTXT
+    MAIN --> ASTJSON
 ```
 
 ---
@@ -202,8 +274,11 @@ make
 # Limpieza y recompilación completa desde cero
 make clean && make
 
-# Pruebas del subconjunto sintáctico del Entregable 1
+# Pruebas de los Entregables 1 y 2 (válidos e inválidos)
 make test
+
+# Validación del AST y de su JSON
+make test-ast
 ```
 
 ---
@@ -215,7 +290,7 @@ Ejecuta el binario sin argumentos:
 ```bash
 ./lexlp
 ```
-1. En la barra superior, usa el **menú desplegable** para elegir una prueba. Las opciones “Sintaxis válida” y “Sintaxis inválida” están pensadas para demostrar el parser; las demás son pruebas del lexer.
+1. En la barra superior, usa el **menú desplegable** para elegir una prueba. Las opciones de sintaxis válida/inválida, las del **Entregable 2** (integral, funciones y E/S) y los casos de arreglos están pensadas para demostrar el parser; las pruebas básicas también sirven como evidencia léxica.
 2. Modifica o escribe código libremente en el panel izquierdo. El editor muestra la numeración de líneas a la izquierda y la posición actual del cursor en el encabezado (`L: línea | C: columna`).
 3. Presiona **▶ Analizar Código**.
 4. Revisa los resultados en las pestañas derechas:
@@ -223,21 +298,29 @@ Ejecuta el binario sin argumentos:
    * **Tabla de Símbolos:** Relación `Posición` e `Identificador`.
    * **Errores Léxicos:** Tabla con `Línea`, `Columna`, `Lexema` y estado `ERROR_LEXICO`.
    * **Sintáctico:** Resultado `ACEPTADO`/`RECHAZADO`, errores del parser y estado “no ejecutado” cuando el lexer falla.
+   * **AST:** Árbol navegable con tipos de nodo, valores, roles y ubicación. Solo aparece cuando el programa es aceptado.
 5. En la esquina inferior derecha se muestra `ui/carlos-gif.gif` en bucle infinito, siempre por encima de los paneles y sin bloquear la interacción.
 
 ### 2. Modo Consola (CLI)
 Ideal para pruebas automatizadas y corrección docente por lotes:
 ```bash
+# Pruebas léxicas históricas
 ./lexlp tests/prueba_basica.lp
 ./lexlp tests/prueba_completa.lp
 ./lexlp tests/prueba_errores.lp
 ./lexlp tests/prueba_limite.lp
 
-# Pruebas del parser (Entregable 1)
+# Entregable 1
 ./lexlp tests/sintactico/valido_minimo.lp
 ./lexlp tests/sintactico/invalido_sin_punto_coma.lp
+
+# Entregable 2
+./lexlp tests/e2/validos/integral.lp
+./lexlp tests/e2/validos/funciones.lp
+./lexlp tests/e2/validos/io_arreglos.lp
+./lexlp tests/e2/invalidos/main_con_tipo.lp
 ```
-El analizador procesará el archivo fuente, ejecutará el lexer y el parser, e imprimirá el resultado sintáctico (`ACEPTADO` o `RECHAZADO`) junto con los errores encontrados. Las salidas se escriben en la carpeta `output/`.
+El analizador procesará el archivo fuente, ejecutará el lexer y, si no hay errores léxicos, el parser. Imprimirá el resultado sintáctico (`ACEPTADO` o `RECHAZADO`), los errores encontrados y, cuando el programa sea aceptado, la ruta del AST generado. Todas las salidas se escriben en `output/`.
 
 Códigos de salida del modo CLI:
 
@@ -249,7 +332,7 @@ Códigos de salida del modo CLI:
 
 Los archivos del lexer se siguen generando aunque el parser rechace el programa, para conservar la evidencia de la fase léxica.
 
-> Las pruebas históricas del lexer usan construcciones que todavía no forman parte del subconjunto sintáctico (`println`, `return;`, `for`), por lo que el parser puede rechazarlas. Para la aceptación sintáctica deben usarse los casos de `tests/sintactico/`.
+> Las pruebas históricas del lexer usan `return;`, que la gramática del Entregable 2 no admite, y `for`, que no pertenece a LP. Por eso pueden ser rechazadas sintácticamente. Para la aceptación sintáctica deben usarse los casos de `tests/sintactico/` y `tests/e2/validos/`.
 
 ---
 
@@ -273,6 +356,23 @@ La carpeta [`tests/sintactico/`](tests/sintactico/) contiene los casos del Entre
 * `invalido_token_inesperado.lp`: token que no inicia un comando.
 * `invalido_declaracion_despues_comando.lp`: declaración después de un comando.
 * `invalido_parentesis_sin_cerrar.lp`: expresión sin `)`.
+
+La carpeta [`tests/e2/`](tests/e2/) contiene los casos del Entregable 2:
+
+* `validos/integral.lp`: ejemplo integral con `if/else`, `while`, `println` y `return`.
+* `validos/funciones.lp`: funciones, parámetros, retorno y llamada `func`.
+* `validos/io_arreglos.lp`: `scanf`, `println` y arreglos.
+* `validos/control.lp`: control de flujo anidado.
+* `validos/expresiones.lp`: precedencia y operadores.
+* `validos/main_simple.lp`: `main()` sin `void` y dimensión prefija.
+* `validos/funcion_comando.lp`: llamada `func` como comando.
+* `invalidos/*.lp`: errores de punto y coma, llaves, paréntesis, `else` sin `if`,
+  `scanf`/`println` vacíos, `return;`, `for`, `int main()`, declaración después
+  de comando y llamadas mal cerradas.
+
+El comando `make test` ejecuta ambos conjuntos y `make test-ast` valida la
+generación y el JSON del AST.
+
 
 ---
 
@@ -304,3 +404,47 @@ Tras cada ejecución (tanto en GUI como en CLI), se actualizan automáticamente:
    ```
 5. **`output/resultado_sintactico.txt`:** Resultado global (`ACEPTADO`,
    `RECHAZADO` o `NO EJECUTADO`).
+6. **`output/ast.txt`:** Árbol de sintaxis abstracta en texto, con roles.
+7. **`output/ast.json`:** AST estructurado para la pestaña de la GUI; contiene
+   `null` cuando el programa no fue aceptado.
+
+Ejemplo de `output/ast.txt` para un programa mínimo:
+
+```text
+Program
+  [main]
+    Main main
+      [body]
+        Block
+          [declaration]
+            VarDecl int
+              [type]
+                Type int
+              [declarator]
+                Declarator edad
+          [command]
+            Assign
+              [target]
+                Identifier edad
+              [value]
+                Literal 20 (num_int)
+```
+
+---
+
+## ⚠️ Limitaciones conocidas
+
+- **Sin análisis semántico:** no se comprueba declaración de variables,
+  compatibilidad de tipos ni ejecución del programa.
+- **Rutas relativas:** el binario debe ejecutarse desde la raíz del repositorio
+  para cargar `ui/index.html` y escribir en `output/`.
+- **Artefactos generados:** `output/*.txt` y `output/*.json` son reportes de
+  ejecución; no deben versionarse.
+- **Columnas UTF-8:** dentro de cadenas se cuentan codepoints; fuera de ellas se
+  cuentan bytes.
+- **`COMP` sin lexema en la salida de tokens:** el token se muestra como
+  `<COMP>`; el operador concreto se conserva en el AST y en los mensajes.
+- **Pruebas históricas:** `tests/prueba_*.lp` usan `return;` y algunas `for`, por
+  lo que pueden ser rechazadas sintácticamente. Para aceptación usar
+  `tests/sintactico/` y `tests/e2/validos/`.
+- **`for` no implementado:** no forma parte de la gramática de LP.

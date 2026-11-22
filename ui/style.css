@@ -561,3 +561,66 @@ textarea::placeholder {
     bottom: 10px;
   }
 }
+
+/* Árbol de sintaxis abstracta */
+.ast-tree {
+  padding: 16px;
+  overflow: auto;
+  font-family: "Fira Code", "Cascadia Code", monospace;
+  font-size: 0.9rem;
+  color: var(--text-main);
+}
+
+.ast-tree ul {
+  list-style: none;
+  margin: 0;
+  padding-left: 20px;
+  border-left: 1px solid rgba(120, 220, 232, 0.25);
+}
+
+.ast-tree .ast-root {
+  padding-left: 0;
+  border-left: none;
+}
+
+.ast-tree li {
+  margin: 4px 0;
+}
+
+.ast-tree details > summary {
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  list-style-position: outside;
+}
+
+.ast-tree details > summary:hover {
+  background: rgba(120, 220, 232, 0.08);
+}
+
+.ast-kind {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.ast-value {
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.ast-type {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.ast-role {
+  color: #f3b562;
+  font-size: 0.78rem;
+  margin-right: 6px;
+  text-transform: lowercase;
+}
+
+.ast-tree .empty-state {
+  color: var(--text-muted);
+  font-family: inherit;
+}

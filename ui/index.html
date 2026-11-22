@@ -23,6 +23,9 @@
         <option value="errors">Prueba de Errores (prueba_errores.lp)</option>
         <option value="edge_cases">Casos Límite (prueba_limite.lp)</option>
         <option value="standard">Ejemplo Estándar LP (@errorLexico)</option>
+        <option value="e2_integral">E2: Integral (if/else, while, return)</option>
+        <option value="e2_funciones">E2: Funciones y llamadas</option>
+        <option value="e2_io">E2: Entrada/Salida y arreglos</option>
       </select>
       <button class="btn btn-primary" onclick="executeAnalysis()">▶ Analizar Código</button>
     </div>
@@ -57,6 +60,9 @@
         </button>
         <button class="tab-btn" data-tab="tab-syntax">
           Sintáctico <span id="syntaxCount" class="badge-count">0</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-ast">
+          AST <span id="astCount" class="badge-count">0</span>
         </button>
       </nav>
 
@@ -126,6 +132,15 @@
                 <tr><td colspan="5" class="empty-cell">Sin errores sintácticos.</td></tr>
               </tbody>
             </table>
+          </div>
+        </div>
+        <!-- Pestaña 5: Árbol de Sintaxis Abstracta -->
+        <div id="tab-ast" class="tab-pane">
+          <div class="view-header">
+            <p>Árbol de sintaxis abstracta generado por el parser.</p>
+          </div>
+          <div id="astContainer" class="ast-tree">
+            <div class="empty-state">Ejecuta el análisis para generar el AST.</div>
           </div>
         </div>
       </div>

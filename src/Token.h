@@ -64,11 +64,11 @@ inline std::string tokenTypeToString(TokenType type) {
 }
 
 struct Token {
-    TokenType type;
+    TokenType type = TokenType::END_OF_FILE;
     std::string lexeme;
     int attribute = -1;
-    int line;
-    int col;
+    int line = 1;
+    int col = 1;
 
     std::string toString() const {
         if (type == TokenType::ID) {

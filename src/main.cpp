@@ -153,10 +153,48 @@ static AnalysisResult execute_analysis_and_export(const std::string& source_code
         }
     }
 
+    // Árbol de sintaxis abstracta en texto.
+    std::ofstream out_ast_txt("output/ast.txt");
+    if (!out_ast_txt.is_open()) {
+        std::cerr << "Error: No se pudo escribir output/ast.txt" << std::endl;
+        outputs_ok = false;
+    } else {
+        if (parseResult.ast) {
+            out_ast_txt << parseResult.ast->to_text();
+        } else {
+            out_ast_txt << "AST no generado: hay errores lexicos o sintacticos.\n";
+        }
+        if (!out_ast_txt.good()) {
+            std::cerr << "Error al escribir output/ast.txt" << std::endl;
+            outputs_ok = false;
+        }
+    }
+
+    // Árbol de sintaxis abstracta en JSON.
+    std::ofstream out_ast_json("output/ast.json");
+    if (!out_ast_json.is_open()) {
+        std::cerr << "Error: No se pudo escribir output/ast.json" << std::endl;
+        outputs_ok = false;
+    } else {
+        if (parseResult.ast) {
+            out_ast_json << parseResult.ast->to_json();
+        } else {
+            out_ast_json << "null";
+        }
+        out_ast_json << "\n";
+        if (!out_ast_json.good()) {
+            std::cerr << "Error al escribir output/ast.json" << std::endl;
+            outputs_ok = false;
+        }
+    }
+
     json_output = output.to_json();
     if (!json_output.empty() && json_output.back() == '}') {
         json_output.pop_back();
-        json_output += ",\"syntax\":" + parseResult.to_json() + "}";
+        json_output += ",\"syntax\":" + parseResult.to_json();
+        json_output += ",\"ast\":";
+        json_output += parseResult.ast ? parseResult.ast->to_json() : "null";
+        json_output += "}";
     }
 
     return AnalysisResult{std::move(output), std::move(parseResult), outputs_ok};
@@ -203,6 +241,10 @@ static int run_cli(const std::string& path) {
         std::cout << "Resultado sintáctico: RECHAZADO" << std::endl;
     } else {
         std::cout << "Resultado sintáctico: ACEPTADO" << std::endl;
+        if (result.parser.ast) {
+            std::cout << "AST guardado en output/ast.txt y output/ast.json"
+                      << std::endl;
+        }
     }
 
     if (result.outputs_ok) {

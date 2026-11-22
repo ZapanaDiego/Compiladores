@@ -13,6 +13,8 @@ lexlp
 
 # Archivos de salida/reportes generados por la ejecución
 output/*.txt
+output/*.json
+output/*.dot
 
 # Archivos temporales y del sistema / editor
 *~

@@ -173,6 +173,54 @@ void main() {
     }
     int @errorLexico = 99;
     return;
+}`,
+  e2_integral: `
+// ==========================================
+// Entregable 2: ejemplo integral
+// ==========================================
+void main() {
+    int edad;
+    float promedio;
+    edad = 20;
+    promedio = 15.5;
+    if (edad >= 18 && edad <= 60) {
+        println("Edad valida");
+    } else {
+        println("Edad no valida");
+    }
+    while (edad > 0) {
+        edad = edad - 1;
+    }
+    return edad;
+}`,
+  e2_funciones: `
+// ==========================================
+// Entregable 2: funciones, parámetros y llamadas
+// ==========================================
+int suma(int a, int b) {
+    int r;
+    r = a + b;
+    return r;
+}
+
+void main() {
+    int x;
+    x = func suma(2, 3);
+    println(x);
+    return x;
+}`,
+  e2_io: `
+// ==========================================
+// Entregable 2: entrada/salida y arreglos
+// ==========================================
+void main() {
+    int datos[10];
+    int i;
+    i = 0;
+    scanf(datos[0], i);
+    println("Valor", datos[0], 42);
+    datos[1] = i + 1;
+    return 0;
 }`
 };
 
@@ -204,6 +252,7 @@ async function executeAnalysis() {
     renderSymbolTable(data.symbols || []);
     renderErrors(data.errors || []);
     renderSyntax(data.syntax || {});
+    renderAST(data.ast || null);
   } catch (err) {
     console.error("Error al procesar la comunicación con C++:", err);
     const status = document.getElementById('syntaxResult');
@@ -363,4 +412,74 @@ function renderSyntax(syntax) {
     });
     tbody.appendChild(tr);
   });
+}
+
+// Módulo 5: Renderizado del Árbol de Sintaxis Abstracta
+function renderAST(ast) {
+  const container = document.getElementById('astContainer');
+  const counter = document.getElementById('astCount');
+  if (!container || !counter) return;
+
+  container.innerHTML = '';
+
+  if (!ast) {
+    counter.textContent = '—';
+    container.innerHTML = '<div class="empty-state">AST no disponible: corrige primero los errores léxicos o sintácticos.</div>';
+    return;
+  }
+
+  let total = 0;
+
+  function buildNode(node) {
+    total += 1;
+
+    const li = document.createElement('li');
+    const details = document.createElement('details');
+    details.open = true;
+
+    const summary = document.createElement('summary');
+    const kind = document.createElement('span');
+    kind.className = 'ast-kind';
+    kind.textContent = node.type || 'Nodo';
+    summary.appendChild(kind);
+
+    if (node.value !== undefined && node.value !== null && node.value !== '') {
+      const value = document.createElement('span');
+      value.className = 'ast-value';
+      value.textContent = ` ${node.value}`;
+      summary.appendChild(value);
+    }
+
+    if (node.valueType) {
+      const valueType = document.createElement('span');
+      valueType.className = 'ast-type';
+      valueType.textContent = ` (${node.valueType})`;
+      summary.appendChild(valueType);
+    }
+
+    details.appendChild(summary);
+
+    if (Array.isArray(node.children) && node.children.length > 0) {
+      const ul = document.createElement('ul');
+      node.children.forEach(child => {
+        if (!child || !child.node) return;
+        const childLi = buildNode(child.node);
+        const role = document.createElement('span');
+        role.className = 'ast-role';
+        role.textContent = `[${child.role}] `;
+        childLi.insertBefore(role, childLi.firstChild);
+        ul.appendChild(childLi);
+      });
+      details.appendChild(ul);
+    }
+
+    li.appendChild(details);
+    return li;
+  }
+
+  const rootUl = document.createElement('ul');
+  rootUl.className = 'ast-root';
+  rootUl.appendChild(buildNode(ast));
+  container.appendChild(rootUl);
+  counter.textContent = total;
 }

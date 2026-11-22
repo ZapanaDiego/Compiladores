@@ -1,6 +1,6 @@
 # AGENTS.md — LexLP Studio
 
-**Última actualización:** 2026-11-12 21:39:15 -05
+**Última actualización:** 2026-11-21 20:29:14 -05
 **Modelo:** DeepSeek V4.1 Flash 1017 (`opencode-go` / `deepseek-v4.1-flash`)
 **Estado:** Activo
 
@@ -158,6 +158,27 @@ son rechazados con mensajes de línea/columna.
 
 ---
 
+### Implementación del Entregable 2 (2026-11-21)
+
+Se completó el analizador sintáctico y se añadió el AST:
+
+- `src/AST.h` / `src/AST.cpp`: nodos genéricos con roles, serialización JSON y
+  árbol textual.
+- Parser: `scanf`, `println`, `if/else`, `while`, `return expr;`, `func` como
+  comando y llamadas en asignaciones.
+- Recuperación de errores con `recoverCommand()`, `recoverTopLevel()` y
+  `synchronize()` consciente de bloques; mensajes específicos para `int main()`,
+  `else` sin `if`, `for`, `return;`, `scanf()`/`println()` vacíos.
+- AST en `output/ast.txt` y `output/ast.json`; respuesta JSON con `"ast"`.
+- Nueva pestaña **AST** en la GUI con árbol navegable.
+- Pruebas nuevas en `tests/e2/validos/` e `tests/e2/invalidos/`.
+- `make test` cubre E1 y E2; `make test-ast` valida el AST y su JSON.
+- Documentación: `README.md` actualizado e `informe_entregable2.md` creado.
+
+Decisiones: `return;` se rechaza; `int main()` se rechaza con mensaje claro;
+`for` no pertenece a LP; se aceptan dimensiones postfijas y asignaciones a
+arreglos por compatibilidad; el AST usa asociatividad por la izquierda.
+
 ## 6. Problemas conocidos y prioridades
 
 ### Estado de correcciones (2026-11-12)
@@ -172,7 +193,7 @@ son rechazados con mensajes de línea/columna.
 | 6. Columnas UTF-8 | Parcial: corregidas dentro de cadenas; otros contextos siguen contando bytes |
 | 7. BOM UTF-8 | Resuelto |
 | 8. Argumentos y archivos vacíos | Resuelto: `--help`, `argc > 2`, archivo vacío y códigos de salida |
-| 9. Pruebas automatizadas | Parcial: `make test` cubre el subconjunto sintáctico |
+| 9. Pruebas automatizadas | Cubiertas para E1 y E2 con `make test` y `make test-ast` |
 | 10. Artefactos generados versionados | Pendiente |
 | 11. Archivos muertos en la raíz | Pendiente |
 | 12. Rama `origin/bran` rota | Pendiente |
@@ -181,7 +202,7 @@ son rechazados con mensajes de línea/columna.
 | 15. Fallback de la UI sin WebKit | Pendiente |
 | 16. CSS inválido | Resuelto |
 | 17. Pruebas duplicadas en `ui/app.js` | Pendiente |
-| 18. README desactualizado | Parcial: actualizado para el parser y los nuevos reportes |
+| 18. README desactualizado | Resuelto: actualizado para E2, AST, pruebas y nuevos reportes |
 | 19. EOF y lexema de `COMP` | Pendiente; confirmar con la cátedra |
 
 ### Alta prioridad
@@ -301,6 +322,9 @@ son rechazados con mensajes de línea/columna.
 | 2026-11-12 | 20:58:05 | -05 | DeepSeek V4.1 Flash 1017 (`opencode-go` / `deepseek-v4.1-flash`) | Rediseño completo de la paleta de la UI: fondo azul profundo, superficies elevadas, texto de alto contraste, acentos turquesa, colores específicos para tokens, estados, tablas, botones, selector, scrollbars y GIF. Se validaron HTML/JS y se generaron capturas con Firefox headless. | `ui/style.css`, `AGENTS.md` |
 | 2026-11-12 | 21:02:13 | -05 | DeepSeek V4.1 Flash 1017 (`opencode-go` / `deepseek-v4.1-flash`) | Creación de `actualizacion.md` con la documentación técnica completa del Entregable 1: alcance, arquitectura, cambios en lexer/parser, integración, pruebas, compilación, limitaciones y pendientes. | `actualizacion.md`, `AGENTS.md` |
 | 2026-11-12 | 21:39:15 | -05 | DeepSeek V4.1 Flash 1017 (`opencode-go` / `deepseek-v4.1-flash`) | Se agregó numeración de líneas al editor: gutter sincronizado con el scroll, actualización al escribir/pegar/cargar muestras, sin ajuste de línea y alineación con la fuente del editor. Se validaron HTML/JS y se generaron capturas con Firefox headless. | `ui/index.html`, `ui/app.js`, `ui/style.css`, `README.md`, `AGENTS.md` |
+| 2026-11-13 | 09:05:46 | -05 | DeepSeek V4.1 Flash 1017 (`opencode-go` / `deepseek-v4.1-flash`) | Lectura/verificación sin cambios. Se revisaron `src/Token.h`, `src/Lexer.*`, `src/SymbolTable.*`, `src/Parser.*`, `src/main.cpp`, `Makefile`, `ui/*`, `README.md` y los casos de `tests/` para elaborar un informe detallado de variables y funciones esenciales. No se compiló ni se reejecutaron pruebas en esta sesión; los resultados citados son los registrados en este archivo. | — |
+| 2026-11-21 | 20:13:31 | -05 | DeepSeek V4.1 Flash 1017 (`opencode-go` / `deepseek-v4.1-flash`) | Implementación del Entregable 2: AST con nodos/roles y serialización; comandos `scanf`, `println`, `if/else`, `while`, `return expr;`, `func` como comando; recuperación de errores y mensajes específicos; salida `ast.txt`/`ast.json`; pestaña AST en la GUI; pruebas E2 y `make test-ast`; README e informe técnico. Verificado con `make clean && make`, `make test` y `make test-ast`. | `src/AST.h`, `src/AST.cpp`, `src/Parser.h`, `src/Parser.cpp`, `src/Token.h`, `src/main.cpp`, `ui/index.html`, `ui/app.js`, `ui/style.css`, `Makefile`, `.gitignore`, `tests/e2/*`, `README.md`, `informe_entregable2.md`, `actualizacion.md`, `AGENTS.md` |
+| 2026-11-21 | 20:29:14 | -05 | DeepSeek V4.1 Flash 1017 (`opencode-go` / `deepseek-v4.1-flash`) | Actualización del `README.md`: estructura real de `output/` y `tests/e2/`, diagrama de arquitectura con AST, comandos `make test`/`make test-ast`, ejemplos CLI de E2, pestaña AST, cobertura de la gramática, extensiones de compatibilidad, asociatividad del AST y limitaciones conocidas. | `README.md`, `AGENTS.md` |
 
 **Plantilla para nuevas entradas:**
 
